@@ -42,10 +42,11 @@ def create_mask(inputFile, outputFile, showResult=True):
 
 
 def create_masks(folderPath):
-    ''' Action: Creates a mask for every image in folder and subfolders. 
-    The masks are named with the same name as the original images but with an extension "_mask"
-    Input: folderpath
-    '''
+    """ 
+    ACTION: Creates a mask for every image in folder and subfolders (not for images with extension "_mask"). 
+            The masks are named with the same name as the original images but with an extension "_mask"
+    INTPUT: folderpath
+    """
     pass
 
 if __name__ == "__main__":
