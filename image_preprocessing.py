@@ -1,11 +1,15 @@
 
 import numpy as np
+import nrrd
+import radiomics
 import cv2
+import os
 
 
 def create_mask(inputFile, outputFile, showResult=True):
-    """ Generates a black and white mask of the input image
-    The white area corresponds to green markings in the 
+    """ 
+    Generates a black and white mask of the input image
+    The white area corresponds to green markings in the
     file including any interior points and the rest is black.
     """
 
@@ -38,8 +42,30 @@ def create_mask(inputFile, outputFile, showResult=True):
         cv2.imshow('intial', original_image)
         cv2.imshow('mask', mask)
         cv2.imshow('result', result)
-        cv2.waitKey(1000)
+        cv2.waitKey(0)
 
+def img2nrrd(imageFile):
+    """
+    ACTION: Creates a file with the extension '.nrrd'
+    INPUTS: imageFile (if no extension, '.tiff' is tried)
+    """
+
+    filename, file_extension = os.path.splitext(imageFile)
+    outputFile = filename + ".nrrd"
+    if len(file_extension) == 0:
+        imageFile += ".tiff"
+
+    if not os.path.exists(outputFile):
+        if cv2.haveImageReader(imageFile):
+            nrrd.write(outputFile, cv2.imread(imageFile))
+    else:
+        print("File already exists: ", outputFile)
+
+def create_all_nrrd(folderPath):
+    """
+    ACTION: Creates nrrd-files for every image in folder and subfolders
+    """
+    pass
 
 def create_masks(folderPath):
     """ 
@@ -48,10 +74,3 @@ def create_masks(folderPath):
     INTPUT: folderpath
     """
     pass
-
-if __name__ == "__main__":
-    pass
-    # #example run:
-    # inputFile = "../data/Pat12T2M/Pat12T2M45.tiff"
-    # outputFile = "../data/Pat12T2M_masked/Pat12T2M45_masked.tiff"
-    # create_mask(inputFile, outputFile, showResult=True)
