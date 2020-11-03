@@ -1,27 +1,27 @@
 import image_preprocessing as imgpr
 import feature_extraction as fextr
-# import nrrd
-# import cv2
-
 
 # Extract label data from patients (either here or in seperate file)
 
-# outputFile = "../../patient_data/10T2M_mask.tiff"
-# inputFileNRRD = "../../patient_data/10T2M.nrrd"
-# outputFileNRRD = "../../patient_data/10T2M_mask.nrrd"
 
+# Settings for feature extraction
+# paramsPath = "Params.yaml"
+paramsPath = "MR_2D_extraction.yaml"
 
-# if cv2.haveImageReader(outputFile):
-#     original_image = cv2.imread(outputFile)
-#     nrrd.write(outputFileNRRD, original_image)
+# Given images
+inputFileNameM = "../../patient_data/10T2M" # With green line
+inputFileNameU = "../../patient_data/10T2U" # Without green line
+fileExt = ".tiff"
 
-# showResult = True
-# # imgpr.create_mask(inputFile, outputFile, showResult)
+# Create a mask
+maskFileName = "../../patient_data/10T2M_mask"
+showResult = False
+imgpr.create_mask(inputFileNameM + fileExt, maskFileName + fileExt, showResult)
 
-inputFile = "../../patient_data/10T2M"
-paramsPath = "Params.yaml"
+imgpr.img2nrrd(maskFileName)
+imgpr.img2nrrd(inputFileNameU)
 
-# imgpr.img2nrrd(inputFile)
+features = fextr.extract_features_from_image(inputFileNameU, maskFileName, paramsPath)
 
-features = fextr.extract_features_from_image(inputFile, paramsPath)
 fextr.print_features(features)
+print("Total number of features: ", len(features))
