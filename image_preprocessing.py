@@ -44,10 +44,10 @@ def create_mask(inputFile, outputFile, showResult=True):
         cv2.imshow('result', result)
         cv2.waitKey(0)
 
-def img2nrrd(imageFile):
+def img2nrrd(imageFile, readGray = True):
     """
     ACTION: Creates a file with the extension '.nrrd'
-    INPUTS: imageFile (if no extension, '.tiff' is tried)
+    INPUTS: imageFile (if no extension, '.tiff' is tried), readGray (boolean)
     """
 
     filename, file_extension = os.path.splitext(imageFile)
@@ -57,7 +57,7 @@ def img2nrrd(imageFile):
 
     if not os.path.exists(outputFile):
         if cv2.haveImageReader(imageFile):
-            nrrd.write(outputFile, cv2.imread(imageFile))
+            nrrd.write(outputFile, cv2.imread(imageFile, 0 if readGray else 1))
     else:
         print("File already exists: ", outputFile)
 
