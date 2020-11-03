@@ -1,16 +1,22 @@
 import cv2 
 import os
 from radiomics import featureextractor
+import scipy
+import trimesh
 
-def extract_features_from_image(imagePath, paramsPath):
+def extract_features_from_image(imagePath, maskPath, paramsPath):
     """
     ACTION: Extract radiomic features from one image given mask and parameters
-    INPUT: imagePath, paramsPath
+    INPUT: imagePath, maskPath, paramsPath
     OUTPUT: dictionary
     """
 
+    # img = imagePath + ".nrrd"
+    # mask = imagePath + "_mask.nrrd"
     img = imagePath + ".nrrd"
-    mask = imagePath + "_mask.nrrd"
+    mask = maskPath + ".nrrd"
+    print(img)
+    print(mask)
 
     if not os.path.isfile(img):
         raise IOError('File does not exist: %s' % img)
@@ -20,7 +26,7 @@ def extract_features_from_image(imagePath, paramsPath):
         raise IOError('File does not exist: %s' % paramsPath)
 
     extractor = featureextractor.RadiomicsFeatureExtractor(paramsPath)
-    results = extractor.execute(img, mask, label=255)
+    results = extractor.execute(img, mask)
     return results
 
 
