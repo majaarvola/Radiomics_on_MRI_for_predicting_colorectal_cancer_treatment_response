@@ -6,20 +6,23 @@ import cv2
 import os
 
 
-def create_mask(inputFile, outputFile, showResult=True):
+def create_mask(imageFile, maskFile, showResult=False):
     """ 
-    Generates a black and white mask of the input image
-    The white area corresponds to green markings in the
-    file including any interior points and the rest is black.
+    ACTION: Generates a black and white mask of the input image
+            The white area corresponds to green markings in the
+            file including any interior points and the rest is black.
+    INPUTS:  imageFile: path to image file
+            maskFile: path of mask file to be created
+            showResult: display image, mask, segmented image
     """
 
     # Read image (if it exists) and make copy for comparison
-    if cv2.haveImageReader(inputFile):
-        original_image = cv2.imread(inputFile)
+    if cv2.haveImageReader(imageFile):
+        originalImage = cv2.imread(imageFile)
     else:
-        print(f"Failed to read input file at {inputFile}")
+        print(f"Failed to read input file at {imageFile}")
         return
-    image = original_image.copy()
+    image = originalImage.copy()
     image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     # Define color range and mask everything within range
@@ -33,44 +36,71 @@ def create_mask(inputFile, outputFile, showResult=True):
     mask = cv2.fillPoly(mask, cnts, (255, 255, 255))
 
     # save the output
-    if not cv2.imwrite(outputFile, mask):
-        print(f"Failed to write output file at {outputFile}")
+    if not cv2.imwrite(maskFile, mask):
+        print(f"Failed to write output file at {maskFile}")
 
     if showResult:
         # Apply mask to original image and show images for visual verification
-        result = cv2.bitwise_and(original_image, original_image, mask=mask)
-        cv2.imshow('intial', original_image)
+        result = cv2.bitwise_and(originalImage, originalImage, mask=mask)
+        cv2.imshow('intial', originalImage)
         cv2.imshow('mask', mask)
         cv2.imshow('result', result)
         cv2.waitKey(0)
 
-def img2nrrd(imageFile, readGray = True):
+def create_nrrd(imageFile, readGray = True):
     """
     ACTION: Creates a file with the extension '.nrrd'
-    INPUTS: imageFile (if no extension, '.tiff' is tried), readGray (boolean)
+    INPUTS: imageFile: path to image file, if no extension, '.tiff' is tried
+            readGray: create nrrd file based on gray scale image
     """
 
     filename, file_extension = os.path.splitext(imageFile)
-    outputFile = filename + ".nrrd"
+    nrrdFile = filename + ".nrrd"
     if len(file_extension) == 0:
         imageFile += ".tiff"
 
-    if not os.path.exists(outputFile):
-        if cv2.haveImageReader(imageFile):
-            nrrd.write(outputFile, cv2.imread(imageFile, 0 if readGray else 1))
-    else:
-        print("File already exists: ", outputFile)
+    if cv2.haveImageReader(imageFile):
+        nrrd.write(nrrdFile, cv2.imread(imageFile, 0 if readGray else 1))
 
-def create_all_nrrd(folderPath):
-    """
-    ACTION: Creates nrrd-files for every image in folder and subfolders
-    """
-    pass
 
-def create_masks(folderPath):
+def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
     """ 
-    ACTION: Creates a mask for every image in folder and subfolders (not for images with extension "_mask"). 
+    ACTION: Creates a mask for every tiff image in folder and subfolders (not for images with extension "_mask"). 
+            Creates nrrd files for every tiff image and its mask.
             The masks are named with the same name as the original images but with an extension "_mask"
-    INTPUT: folderpath
+            
+    INPUTS: folderpath
+            overwrite: overwrite existing masks and nrrd files
+            readGray: create nrrd files based on gray scale image
     """
-    pass
+    for dirPath, _, files in os.walk(folderPath):
+        createdMasks = False
+        createdNrrds = False
+        for fileNameExt in files:
+            fileName, fileExt = os.path.splitext(fileNameExt)
+            if fileExt == ".tiff" and not fileName.endswith("_mask"):
+                maskFile = dirPath + "\\" + fileName + "_mask" 
+                imageFile = dirPath + "\\" + fileName
+
+                # Create masks
+                if not os.path.exists(maskFile + fileExt) or overWrite:
+                    create_mask(imageFile + fileExt, maskFile + fileExt, showResult=False)
+                    createdMasks = True
+
+                # Create nrrds
+                if not os.path.exists(imageFile + ".nrrd") or overWrite:
+                    create_nrrd(imageFile, readGray)
+                    createdNrrds = True
+
+                if not os.path.exists(maskFile + ".nrrd") or overWrite:
+                    create_nrrd(maskFile, readGray)
+                    createdNrrds = True
+                
+
+        if createdMasks and createdNrrds:
+            print(f'Created masks and nrrd files in "{dirPath}"')
+        elif createdMasks: print(f'Created masks in "{dirPath}"')
+        elif createdNrrds: print(f'Created nrrd files in "{dirPath}"')
+                
+
+    
