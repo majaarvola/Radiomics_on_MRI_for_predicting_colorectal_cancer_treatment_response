@@ -11,7 +11,7 @@ def create_mask(imageFile, maskFile, showResult=False):
     ACTION: Generates a black and white mask of the input image
             The white area corresponds to green markings in the
             file including any interior points and the rest is black.
-    INPUTS:  imageFile: path to image file
+    INPUTS: imageFile: path to image file
             maskFile: path of mask file to be created
             showResult: display image, mask, segmented image
     """
@@ -26,14 +26,22 @@ def create_mask(imageFile, maskFile, showResult=False):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     # Define color range and mask everything within range
-    lower = np.array([5, 10, 5], dtype="uint8")
-    upper = np.array([230, 255, 230], dtype="uint8")
+    lower = np.array([50, 125, 125], dtype="uint8")
+    upper = np.array([100, 255, 255], dtype="uint8")
     mask = cv2.inRange(image, lower, upper)
 
     # Add interior points to mask
     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     mask = cv2.fillPoly(mask, cnts, (255, 255, 255))
+
+    # Perform erosion on mask
+    kernel = np.ones((3,3),np.uint8)
+    kernel[0,0] = 0
+    kernel[0,-1] = 0
+    kernel[-1,0] = 0
+    kernel[-1,-1] = 0
+    mask = cv2.erode(mask,kernel,iterations = 1)
 
     # save the output
     if not cv2.imwrite(maskFile, mask):
@@ -96,11 +104,6 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
                     create_nrrd(maskFile, readGray)
                     createdNrrds = True
                 
-
-        if createdMasks and createdNrrds:
-            print(f'Created masks and nrrd files in "{dirPath}"')
+        if createdMasks and createdNrrds: print(f'Created masks and nrrd files in "{dirPath}"')
         elif createdMasks: print(f'Created masks in "{dirPath}"')
         elif createdNrrds: print(f'Created nrrd files in "{dirPath}"')
-                
-
-    
