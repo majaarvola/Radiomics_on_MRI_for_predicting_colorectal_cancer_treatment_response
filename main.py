@@ -27,6 +27,5 @@ import feature_extraction as fextr
 # print("Total number of features: ", len(features))
 
 
-directory = "..\..\patient_data"
-imgpr.create_masks_and_nrrds(directory)
-
+dirPath = "..\..\patient_data"
+imgpr.create_masks_and_nrrds(dirPath, overWrite=True)
