@@ -39,6 +39,3 @@ setting:
 
   # Shift to make sure all values are positive
   voxelArrayShift: 300
-
-  
-
