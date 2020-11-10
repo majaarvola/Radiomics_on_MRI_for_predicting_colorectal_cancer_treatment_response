@@ -28,4 +28,4 @@ import feature_extraction as fextr
 
 
 dirPath = "..\..\patient_data"
-imgpr.create_masks_and_nrrds(dirPath, overWrite=True)
+imgpr.create_masks_and_nrrds(dirPath, overWrite=False)

@@ -93,6 +93,11 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
             readGray: create nrrd files based on gray scale image
     """
 
+    manualMasksPath = folderPath + '\\manual_masks.txt'
+
+    with open(manualMasksPath, 'r') as manualMasksFile:
+        manualMaskNames = manualMasksFile.read().splitlines()
+
     patDirNames = os.listdir(folderPath)
     for patDirName in patDirNames:
 
@@ -122,8 +127,9 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
                             # This line will be reached for all tiff-files to be masked
                             imagePath = patSubDirPath + '\\' + fileNameExt
                             maskPath = patSubDirPath + '_mask\\' + fileName + '_mask' + fileExt
-                            if not os.path.exists(maskPath) or overWrite:
+                            if not os.path.exists(maskPath) or (overWrite and fileName + '_mask' + fileExt not in manualMaskNames):
                                 createdMasks = create_mask(imagePath, maskPath, showResult=False) or createdMasks
+
                             if not os.path.exists(patSubDirPath + '_mask\\' + fileName + '_mask.nrrd') or overWrite:
                                 createdNrrds = create_nrrd(maskPath, readGray) or createdNrrds
 
