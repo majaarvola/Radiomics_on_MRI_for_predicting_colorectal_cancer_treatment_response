@@ -11,8 +11,6 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     OUTPUT: dictionary
     """
 
-    # img = imagePath + ".nrrd"
-    # mask = imagePath + "_mask.nrrd"
     img = imagePath + ".nrrd"
     mask = maskPath + ".nrrd"
     print(img)
@@ -28,7 +26,6 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     extractor = featureextractor.RadiomicsFeatureExtractor(paramsPath)
     results = extractor.execute(img, mask)
     return results
-
 
 def extract_features_from_all(folderPath, paramsPath):
     """
