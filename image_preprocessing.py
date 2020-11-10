@@ -123,9 +123,9 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
                             imagePath = patSubDirPath + '\\' + fileNameExt
                             maskPath = patSubDirPath + '_mask\\' + fileName + '_mask' + fileExt
                             if not os.path.exists(maskPath) or overWrite:
-                                createdMasks = createdMasks or create_mask(imagePath, maskPath, showResult=False)
+                                createdMasks = create_mask(imagePath, maskPath, showResult=False) or createdMasks
                             if not os.path.exists(patSubDirPath + '_mask\\' + fileName + '_mask.nrrd') or overWrite:
-                                createdNrrds = createdNrrds or create_nrrd(maskPath, readGray)
+                                createdNrrds = create_nrrd(maskPath, readGray) or createdNrrds
 
                 elif os.path.isdir(patSubDirPath) and re.search('^Pat.+U$', patSubDirName):
                     # This line will be reached once for sub-directory starting with 'Pat' and ending with 'U'
@@ -137,7 +137,7 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
                             # This line will be reached for all tiff-files to generate nrrd-file from
                             imageFile = patSubDirPath + '\\' + fileName
                             if not os.path.exists(imageFile + '.nrrd') or overWrite:
-                                createdNrrds = createdNrrds or create_nrrd(imageFile + fileExt, readGray)
+                                createdNrrds = create_nrrd(imageFile + fileExt, readGray) or createdNrrds
 
         if createdNrrds and createdMasks:
             print(patDirName + ': Masks and nrrd-files created. ')
