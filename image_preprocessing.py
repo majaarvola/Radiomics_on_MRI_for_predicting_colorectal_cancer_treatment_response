@@ -6,6 +6,31 @@ import cv2
 import os
 import re
 
+def create_3d_nrrd(folderPath):
+    """
+    ACTION: Create three dimensional nrrd-file from all tiff-files in given folder, 
+            the nrrd-file will be located next to the folder with the same name
+    INPUTS: folderPath: folder with tiff-files
+    """
+
+    if not os.path.isdir(folderPath): return # Exit if folder does not exist
+
+    fileNames = os.listdir(folderPath) # Read content in the folder
+
+    nrTiffFiles = sum(x.endswith('.tiff') for x in fileNames)
+    if nrTiffFiles == 0: return # Exit if folder contains no tiff-files
+
+    # Make 3D-nrrd-file from all tiff-files in the folder
+    i = 0
+    data = np.zeros((400,400,nrTiffFiles)) # Allocate 3D-array for data, 400x400 IMAGES ASSUMED
+    for fileName in fileNames:
+        if fileName.endswith('.tiff'): # For all tiff-files in the folder
+            # Insert grayscaled layer into 3D-array
+            data[:,:,i] = cv2.imread(folderPath + '\\' + fileName, 0)
+            i += 1
+
+    nrrd.write(folderPath + '.nrrd', data) # Write 3D-nrrd-file
+
 
 def create_mask(imageFile, maskFile, showResult=False):
     """ 
@@ -32,8 +57,8 @@ def create_mask(imageFile, maskFile, showResult=False):
     mask = cv2.inRange(image, lower, upper)
 
     # Do not create mask if there is no segmentation in the image
-    if np.max(mask) == 0:
-        return 0
+    # if np.max(mask) == 0:
+    #     return 0
 
     # Add interior points to mask
     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -163,7 +188,7 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
 
 def erosion_manual_masks(folderPath):
     """ 
-    ACTION: Perform erorsion on all images listed in manual_masks.txt, overwrites the images with eroded ones. 
+    ACTION: Perform erosion on all images listed in manual_masks.txt, overwrites the images with eroded ones. 
             
     INPUTS: folderpath
     """
