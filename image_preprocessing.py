@@ -41,12 +41,7 @@ def create_mask(imageFile, maskFile, showResult=False):
     mask = cv2.fillPoly(mask, cnts, (255, 255, 255))
 
     # Perform erosion on mask
-    kernel = np.ones((3,3),np.uint8)
-    kernel[0,0] = 0
-    kernel[0,-1] = 0
-    kernel[-1,0] = 0
-    kernel[-1,-1] = 0
-    mask = cv2.erode(mask,kernel,iterations = 1)
+    mask = erosion(mask)
 
     # save the output
     if not cv2.imwrite(maskFile, mask):
@@ -61,6 +56,18 @@ def create_mask(imageFile, maskFile, showResult=False):
         cv2.waitKey(0)
     
     return 1
+
+def erosion(mask):
+    """
+    ACTION: Performs erosion on the input image, returns the result
+    INPUTS: mask: image to perform erosion on
+    """
+    kernel = np.ones((3,3),np.uint8)
+    kernel[0,0] = 0
+    kernel[0,-1] = 0
+    kernel[-1,0] = 0
+    kernel[-1,-1] = 0
+    return cv2.erode(mask,kernel,iterations = 1)
 
 def create_nrrd(imageFile, readGray = True):
     """
@@ -93,8 +100,8 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
             readGray: create nrrd files based on gray scale image
     """
 
+    # Read file names of manually created masks from manual_masks.txt
     manualMasksPath = folderPath + '\\manual_masks.txt'
-
     with open(manualMasksPath, 'r') as manualMasksFile:
         manualMaskNames = manualMasksFile.read().splitlines()
 
@@ -151,3 +158,42 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
             print(patDirName + ': Masks created. ')
         elif createdNrrds:
             print(patDirName + ': Masks nrrd-files created. ')
+
+
+
+def erosion_manual_masks(folderPath):
+    """ 
+    ACTION: Perform erorsion on all images listed in manual_masks.txt, overwrites the images with eroded ones. 
+            
+    INPUTS: folderpath
+    """
+
+    # Read file names of manually created masks from manual_masks.txt
+    manualMasksPath = folderPath + '\\manual_masks.txt'
+    with open(manualMasksPath, 'r') as manualMasksFile:
+        manualMaskNames = manualMasksFile.read().splitlines()
+
+    patDirNames = os.listdir(folderPath)
+    for patDirName in patDirNames:
+
+        patDirPath = folderPath + '\\' + patDirName
+        if os.path.isdir(patDirPath):
+
+            # This line will be reached once for every patient directory
+            patSubDirNames = os.listdir(patDirPath)
+            for patSubDirName in patSubDirNames:
+
+                patSubDirPath = patDirPath + '\\' + patSubDirName
+                if os.path.isdir(patSubDirPath) and re.search('^Pat.+T2M[+frisk]*_mask$', patSubDirName): 
+                    # This line will be reached once for sub-directory starting with 'Pat',
+                    # containing 'T2M', 'T2M+' or 'T2Mfrisk' and ending with '_mask'
+
+                    fileNameExts = os.listdir(patSubDirPath)
+
+                    for fileNameExt in fileNameExts:
+                        if fileNameExt in manualMaskNames:
+                            # This line will be reached for files listed in manual_masks.txt
+                            maskPath = patSubDirPath + '\\' + fileNameExt
+                            mask = cv2.imread(maskPath) # Read
+                            mask = erosion(mask) # Perform erosion
+                            cv2.imwrite(maskPath, mask) # Write
