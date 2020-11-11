@@ -12,7 +12,15 @@ imageType:
   # SquareRoot: {}
   # LBP2D: {}
 
-# featureClass: #By default, all features are enabled
+featureClass: #By default, all features are enabled
+  # This is all features except shape2D
+  firstorder:
+  shape:
+  glcm: 
+  glrlm:
+  glszm:
+  gldm:
+  ngtdm:
 
 
 setting:
@@ -31,8 +39,8 @@ setting:
   # preCrop: True
 
   # Probably not needed if input mask is in 2D
-  # force2D: True
-  # force2Ddimension: 0
+  force2D: True
+  force2Ddimension: 0
 
   # Gray scale discretization
   binWidth: 5 # This parameter should be estimated by analyzing the dataset firstorder range and chosen to be as close as possible to the 30-130 range. 

@@ -13,8 +13,6 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
 
     img = imagePath + ".nrrd"
     mask = maskPath + ".nrrd"
-    print(img)
-    print(mask)
 
     if not os.path.isfile(img):
         raise IOError('File does not exist: %s' % img)
