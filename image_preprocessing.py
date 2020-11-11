@@ -23,7 +23,7 @@ def create_3d_nrrd(folderPath):
     # Make 3D-nrrd-file from all tiff-files in the folder
     i = 0
     data = np.zeros((400,400,nrTiffFiles)) # Allocate 3D-array for data, 400x400 IMAGES ASSUMED
-    for fileName in fileNames:
+    for fileName in sorted(fileNames):
         if fileName.endswith('.tiff'): # For all tiff-files in the folder
             # Insert grayscaled layer into 3D-array
             data[:,:,i] = cv2.imread(folderPath + '\\' + fileName, 0)
