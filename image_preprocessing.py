@@ -6,32 +6,6 @@ import cv2
 import os
 import re
 
-def create_3d_nrrd(folderPath):
-    """
-    ACTION: Create three dimensional nrrd-file from all tiff-files in given folder, 
-            the nrrd-file will be located next to the folder with the same name
-    INPUTS: folderPath: folder with tiff-files
-    """
-
-    if not os.path.isdir(folderPath): return # Exit if folder does not exist
-
-    fileNames = os.listdir(folderPath) # Read content in the folder
-
-    nrTiffFiles = sum(x.endswith('.tiff') for x in fileNames)
-    if nrTiffFiles == 0: return # Exit if folder contains no tiff-files
-
-    # Make 3D-nrrd-file from all tiff-files in the folder
-    i = 0
-    data = np.zeros((400,400,nrTiffFiles)) # Allocate 3D-array for data, 400x400 IMAGES ASSUMED
-    for fileName in sorted(fileNames):
-        if fileName.endswith('.tiff'): # For all tiff-files in the folder
-            # Insert grayscaled layer into 3D-array
-            data[:,:,i] = cv2.imread(folderPath + '\\' + fileName, 0)
-            i += 1
-
-    nrrd.write(folderPath + '.nrrd', data) # Write 3D-nrrd-file
-
-
 def create_mask(imageFile, maskFile, showResult=False):
     """ 
     ACTION: Generates a black and white mask of the input image
@@ -40,6 +14,7 @@ def create_mask(imageFile, maskFile, showResult=False):
     INPUTS: imageFile: path to image file
             maskFile: path of mask file to be created
             showResult: display image, mask, segmented image
+    OUTPUT: 1 if mask was created, 0 if not
     """
 
     # Read image (if it exists) and make copy for comparison
@@ -47,7 +22,7 @@ def create_mask(imageFile, maskFile, showResult=False):
         originalImage = cv2.imread(imageFile)
     else:
         print(f"Failed to read input file at {imageFile}")
-        return
+        return 0
     image = originalImage.copy()
     image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -55,10 +30,6 @@ def create_mask(imageFile, maskFile, showResult=False):
     lower = np.array([50, 125, 125], dtype="uint8")
     upper = np.array([100, 255, 255], dtype="uint8")
     mask = cv2.inRange(image, lower, upper)
-
-    # Do not create mask if there is no segmentation in the image
-    # if np.max(mask) == 0:
-    #     return 0
 
     # Add interior points to mask
     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -94,25 +65,36 @@ def erosion(mask):
     kernel[-1,-1] = 0
     return cv2.erode(mask,kernel,iterations = 1)
 
-def create_nrrd(imageFile, readGray = True):
+
+def create_3d_nrrd(folderPath):
     """
-    ACTION: Creates a file with the extension '.nrrd'
-    INPUTS: imageFile: path to image file, if no extension, '.tiff' is tried
-            readGray: create nrrd file based on gray scale image
+    ACTION: Create three dimensional nrrd-file from all tiff-files in given folder, 
+            the nrrd-file will be located next to the folder with the same name
+    INPUTS: folderPath: folder with tiff-files
+    OUTPUT: 1 if nrrd-file was created, 0 if not
     """
 
-    filename, file_extension = os.path.splitext(imageFile)
-    nrrdFile = filename + ".nrrd"
-    if len(file_extension) == 0:
-        imageFile += ".tiff"
+    if not os.path.isdir(folderPath): return 0 # Exit if folder does not exist
 
-    if cv2.haveImageReader(imageFile):
-        nrrd.write(nrrdFile, cv2.imread(imageFile, 0 if readGray else 1))
-        return 1
+    fileNames = os.listdir(folderPath) # Read content in the folder
+    tiffFileNames = [x for x in fileNames if x.endswith('.tiff')] # List with all tiff-images
+    nrTiffFiles = len(tiffFileNames) # Number of tiff-images in folder
 
-    return 0
+    if nrTiffFiles == 0: return 0 # Exit if folder contains no tiff-files
 
+    firstImage = cv2.imread(folderPath + '\\' + tiffFileNames[0], 0)
+    w, h = firstImage.shape # Width and height of the first tiff-image in the folder
 
+    # Make 3D-nrrd-file from all tiff-files in the folder
+    i = 0
+    data = np.zeros((w,h,nrTiffFiles)) # Allocate 3D-array for data, 400x400 IMAGES ASSUMED
+    for fileName in sorted(tiffFileNames):
+        # Insert grayscaled layer into 3D-array
+        data[:,:,i] = cv2.imread(folderPath + '\\' + fileName, 0)
+        i += 1
+
+    nrrd.write(folderPath + '.nrrd', data) # Write 3D-nrrd-file
+    return 1
 
 def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
     """ 
@@ -162,20 +144,14 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
                             if not os.path.exists(maskPath) or (overWrite and fileName + '_mask' + fileExt not in manualMaskNames):
                                 createdMasks = create_mask(imagePath, maskPath, showResult=False) or createdMasks
 
-                            if not os.path.exists(patSubDirPath + '_mask\\' + fileName + '_mask.nrrd') or overWrite:
-                                createdNrrds = create_nrrd(maskPath, readGray) or createdNrrds
+                    if not os.path.exists(patSubDirPath + '_mask.nrrd') or overWrite:
+                        createdNrrds = create_3d_nrrd(patSubDirPath + '_mask') or createdNrrds
 
                 elif os.path.isdir(patSubDirPath) and re.search('^Pat.+U$', patSubDirName):
                     # This line will be reached once for sub-directory starting with 'Pat' and ending with 'U'
 
-                    fileNameExts = os.listdir(patSubDirPath)
-                    for fileNameExt in fileNameExts:
-                        fileName, fileExt = os.path.splitext(fileNameExt)
-                        if fileExt == '.tiff':
-                            # This line will be reached for all tiff-files to generate nrrd-file from
-                            imageFile = patSubDirPath + '\\' + fileName
-                            if not os.path.exists(imageFile + '.nrrd') or overWrite:
-                                createdNrrds = create_nrrd(imageFile + fileExt, readGray) or createdNrrds
+                    if not os.path.exists(patSubDirPath + '.nrrd') or overWrite:
+                        createdNrrds = create_3d_nrrd(patSubDirPath) or createdNrrds
 
         if createdNrrds and createdMasks:
             print(patDirName + ': Masks and nrrd-files created. ')
