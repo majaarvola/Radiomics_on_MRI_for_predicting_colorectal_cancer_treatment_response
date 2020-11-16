@@ -27,23 +27,29 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     return results
 
 
-def extract_features_from_patient(patientId, img2use, mask2use, paramsPath, featuresFile):
+def extract_features_from_patient(patientId, img2use, mask2use, paramsPath, featuresPath):
     """
     ACTION: Extract all features from a patient and write the result in the featuresFile.
     INPUT:  patientId
             img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
             mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
             paramsPath: parameter path
-            featuresFile: path to file where to write the result.
+            featuresPath: path to file where to write the result.
     """    
-    
 
 
 
-def extract_features_from_all(folderPath, paramsPath):
+
+
+
+def extract_features_from_all(folderPath, img2use, mask2use, paramsPath, featuresPath):
     """
     ACTION: Loops through all patients, extract features and store the content in a table
-    INPUT: folder path and parameter path
+    INPUT:  folderPath
+            img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
+            mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
+            paramsPath: parameter path
+            featuresPath: path to file where to write all the extracted features
     OUTPUT: table where each row corresponds to one patient and each column
             corresponds to one feature 
             (CHECK THAT THIS IS VALID INPUT FOR NEXT STEP IN PIPELINE)
