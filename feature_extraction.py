@@ -8,9 +8,14 @@ import re
 
 def extract_features_from_image(imagePath, maskPath, paramsPath):
     """
-    ACTION: Extract radiomic features from one image given mask and parameters
-    INPUT: imagePath, maskPath, paramsPath
-    OUTPUT: dictionary
+    ACTION: 
+        Extract radiomic features from one image given mask and parameters
+    INPUT: 
+        imagePath: path to image nrrd
+        maskPath: path to mask nrrd
+        paramsPath: path to file where to write the result
+    OUTPUT: 
+        dictionary
     """
 
     img = imagePath + ".nrrd"
@@ -28,20 +33,22 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     return results
 
 
-def extract_features_from_patient(folderPath, patientId, img2use, mask2use, paramsPath, featuresPath):
+def extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, featuresPath):
     """
-    ACTION: Extract all features from a patient and write the result in the featuresFile.
-    INPUT:  patientId: Patient ID in string format, ex "13"
-            img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
-            mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
-            paramsPath: parameter path
-            featuresPath: path to file where to write the result.
+    ACTION: 
+        Extract all features from a patient and write the result in the featuresFile.
+    INPUT:  
+        patientId: Patient ID in string format, ex "13"
+        img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
+        mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
+        paramsPath: parameter path
+        featuresPath: path to file where to write the result
     """    
     #Add patient ID first in the dictionary
     features = {"patientId": patientId} 
 
     # Create path to patient folder
-    patientFolder = folderPath + '/' + 'Pat' + patientId + '/'
+    patientFolder = dataPath + '/' + 'Pat' + patientId + '/'
 
     # Go through all images to use and create paths for each
     for img in img2use:
@@ -77,32 +84,36 @@ def extract_features_from_patient(folderPath, patientId, img2use, mask2use, para
 
 
 
-def extract_features_from_all(folderPath, img2use, mask2use, paramsPath, featuresPath):
+def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath):
     """
-    ACTION: Loops through all patients, extract features and store the content in a file
-    INPUT:  folderPath
-            img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
-            mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
-            paramsPath: parameter path
-            featuresPath: path to file where to write all the extracted features
+    ACTION: 
+        Loops through all patients, extract features and store the content in a file
+    INPUT:  
+        dataPath
+        img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
+        mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
+        paramsPath: parameter path
+        featuresPath: path to file where to write all the extracted features
     """
 
     with open(featuresPath, "w") as f:
         f.truncate()    
 
     # Create list with all existing patient IDs in the data folder
-    folderContent = os.listdir(folderPath)
+    folderContent = os.listdir(dataPath)
     patIds = [int(x[3:]) for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
 
     for patientId in sorted(patIds):
-        extract_features_from_patient(folderPath, str(patientId), img2use, mask2use, paramsPath, featuresPath)
+        extract_features_from_patient(dataPath, str(patientId), img2use, mask2use, paramsPath, featuresPath)
         print(f"Pat{patientId}: features extracted")
 
 
 def print_features(features):
     """
-    ACTION: Print the radiomics features
-    INPUT: dictionary with radiomics features
+    ACTION: 
+        Print the radiomics features
+    INPUT: 
+        dictionary with radiomics features
     """
     print("Calculated features")
     for key, value in features.items():

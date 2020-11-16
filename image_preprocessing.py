@@ -8,13 +8,16 @@ import re
 
 def create_mask(imageFile, maskFile, showResult=False):
     """ 
-    ACTION: Generates a black and white mask of the input image
-            The white area corresponds to green markings in the
-            file including any interior points and the rest is black.
-    INPUTS: imageFile: path to image file
-            maskFile: path of mask file to be created
-            showResult: display image, mask, segmented image
-    OUTPUT: 1 if mask was created, 0 if not
+    ACTION: 
+        Generates a black and white mask of the input image
+        The white area corresponds to green markings in the
+        file including any interior points and the rest is black.
+    INPUTS: 
+        imageFile: path to image file
+        maskFile: path of mask file to be created
+        showResult: display image, mask, segmented image
+    OUTPUT: 
+        1 if mask was created, 0 if not
     """
 
     # Read image (if it exists) and make copy for comparison
@@ -55,8 +58,10 @@ def create_mask(imageFile, maskFile, showResult=False):
 
 def erosion(mask):
     """
-    ACTION: Performs erosion on the input image, returns the result
-    INPUTS: mask: image to perform erosion on
+    ACTION: 
+        Performs erosion on the input image, returns the result
+    INPUTS: 
+        mask: image to perform erosion on
     """
     kernel = np.ones((3,3),np.uint8)
     kernel[0,0] = 0
@@ -68,10 +73,13 @@ def erosion(mask):
 
 def create_3d_nrrd(folderPath):
     """
-    ACTION: Create three dimensional nrrd-file from all tiff-files in given folder, 
-            the nrrd-file will be located next to the folder with the same name
-    INPUTS: folderPath: folder with tiff-files
-    OUTPUT: 1 if nrrd-file was created, 0 if not
+    ACTION: 
+        Create three dimensional nrrd-file from all tiff-files in given folder, 
+        the nrrd-file will be located next to the folder with the same name
+    INPUTS: 
+        folderPath: folder with tiff-files
+    OUTPUT: 
+        1 if nrrd-file was created, 0 if not
     """
 
     if not os.path.isdir(folderPath): return 0 # Exit if folder does not exist
@@ -98,13 +106,14 @@ def create_3d_nrrd(folderPath):
 
 def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
     """ 
-    ACTION: Creates a mask for every tiff image in folder and subfolders (not for images with extension "_mask"). 
-            Creates nrrd files for every tiff image and its mask.
-            The masks are named with the same name as the original images but with an extension "_mask"
-            
-    INPUTS: folderpath
-            overwrite: overwrite existing masks and nrrd files
-            readGray: create nrrd files based on gray scale image
+    ACTION: 
+        Creates a mask for every tiff image in folder and subfolders (not for images with extension "_mask"). 
+        Creates nrrd files for every tiff image and its mask.
+        The masks are named with the same name as the original images but with an extension "_mask"
+    INPUTS: 
+        folderpath
+        overwrite: overwrite existing masks and nrrd files
+        readGray: create nrrd files based on gray scale image
     """
 
     # Read file names of manually created masks from manual_masks.txt
@@ -164,9 +173,10 @@ def create_masks_and_nrrds(folderPath, overWrite = False, readGray = True):
 
 def erosion_manual_masks(folderPath):
     """ 
-    ACTION: Perform erosion on all images listed in manual_masks.txt, overwrites the images with eroded ones. 
-            
-    INPUTS: folderpath
+    ACTION: 
+        Perform erosion on all images listed in manual_masks.txt, overwrites the images with eroded ones.     
+    INPUTS: 
+        folderpath
     """
 
     # Read file names of manually created masks from manual_masks.txt
