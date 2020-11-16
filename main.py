@@ -6,9 +6,11 @@ import time
 # Settings for feature extraction
 paramsPath = "Params.yaml"
 
-dirPath = "../../patient_data"
+dataPath = "../../patient_data"
+featuresPath = "../../patient_data/features.csv"
+
 t0 = time.time()
-imgpr.create_masks_and_nrrds(dirPath, overWrite=False)
+imgpr.create_masks_and_nrrds(dataPath, overWrite=False)
 t1 = time.time()
 
 print('Elapsed time:', t1-t0)
