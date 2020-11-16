@@ -31,8 +31,8 @@ setting:
   normalizeScale: 100
 
   # Resampling
-  # interpolator: 'sitkBSpline'
-  # resampledPixelSpacing: [2, 2, 0] # change to 2d: [2,2] for gray scale images
+  interpolator: 'sitkBSpline'
+  resampledPixelSpacing: [2, 2, 0] # change to 2d: [2,2] for gray scale images
 
   # PreCrop Setting preCrop to true speeds up extraction and makes it less memory intensive
   # padDistance: 10  
