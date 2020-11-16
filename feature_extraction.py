@@ -3,6 +3,7 @@ import os
 from radiomics import featureextractor
 import scipy
 import trimesh
+import csv
 
 def extract_features_from_image(imagePath, maskPath, paramsPath):
     """
@@ -24,6 +25,20 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     extractor = featureextractor.RadiomicsFeatureExtractor(paramsPath)
     results = extractor.execute(img, mask)
     return results
+
+
+def extract_features_from_patient(patientId, img2use, mask2use, paramsPath, featuresFile):
+    """
+    ACTION: Extract all features from a patient and write the result in the featuresFile.
+    INPUT:  patientId
+            img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
+            mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
+            paramsPath: parameter path
+            featuresFile: path to file where to write the result.
+    """    
+    
+
+
 
 def extract_features_from_all(folderPath, paramsPath):
     """
