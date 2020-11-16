@@ -9,8 +9,13 @@ paramsPath = "Params.yaml"
 dataPath = "../../patient_data"
 featuresPath = "../../patient_data/features.csv"
 
+img2use = ["T1", "T2"]
+mask2use = ["M"]
+
+
 t0 = time.time()
 imgpr.create_masks_and_nrrds(dataPath, overWrite=False)
+fextr.extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath)
 t1 = time.time()
 
 print('Elapsed time:', t1-t0)
