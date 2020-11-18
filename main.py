@@ -9,16 +9,19 @@ paramsPath = "Params.yaml"
 dataPath = "../../patient_data"
 featuresPath = "../../patient_data/features.csv"
 
-img2use = ["T1", "T2"]
+img2use = ["T2"]
 mask2use = ["M"]
 
+imgpr.create_manual_masks(dataPath)
 
 t0 = time.time()
 imgpr.create_masks_and_nrrds(dataPath, overWrite=False)
-fextr.extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath)
 t1 = time.time()
+# fextr.extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath)
+# t2 = time.time()
 
-print('Elapsed time:', t1-t0)
+# print('Elapsed time create mask and nrrd:', t1-t0)
+# print('Elapsed time extract features    :', t2-t1)
 
 # dirMaskPath = "../../patient_data/Pat14/Pat14T2M_mask"
 # imgpr.create_3d_nrrd(dirMaskPath)
