@@ -164,13 +164,13 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
 def erosion_manual_masks(dataPath):
     """ 
     ACTION: 
-        Perform erosion on all images listed in manual_masks.txt, overwrites the images with eroded ones.     
+        Perform erosion on all images listed in 'manual_masks_to_add.txt', overwrites the images with eroded ones.     
     INPUTS: 
         dataPath
     """
 
-    # Read file names of manually created masks from manual_masks.txt
-    manualMasksPath = dataPath + '\\manual_masks.txt'
+    # Read file names of manually created masks from manual_masks_to_add.txt
+    manualMasksPath = dataPath + '\\manual_masks_to_add.txt'
     with open(manualMasksPath, 'r') as manualMasksFile:
         manualMaskNames = manualMasksFile.read().splitlines()
 
@@ -193,7 +193,7 @@ def erosion_manual_masks(dataPath):
 
                     for fileNameExt in fileNameExts:
                         if fileNameExt in manualMaskNames:
-                            # This line will be reached for files listed in manual_masks.txt
+                            # This line will be reached for files listed in manual_masks_to_add.txt
                             maskPath = patSubDirPath + '\\' + fileNameExt
                             mask = cv2.imread(maskPath) # Read
                             mask = erosion(mask) # Perform erosion
@@ -202,13 +202,13 @@ def erosion_manual_masks(dataPath):
 def create_manual_masks(dataPath):
     """ 
     ACTION: 
-        Perform erosion on all images listed in manual_masks.txt, overwrites the images with eroded ones.     
+        Create the masks listed in 'manual_masks_to_add.txt'. The masks are without interior points and erosion.   
     INPUTS: 
         dataPath
     """
 
-    # Read file names of manually created masks from manual_masks.txt
-    manualMasksPath = dataPath + '\\manual_masks.txt'
+    # Read file names of manually created masks from manual_masks_to_add.txt
+    manualMasksPath = dataPath + '\\manual_masks_to_add.txt'
     with open(manualMasksPath, 'r') as manualMasksFile:
         manualMaskNames = manualMasksFile.read().splitlines()
 
@@ -236,7 +236,7 @@ def create_manual_masks(dataPath):
 
                     for fileNameExt in fileNameExts:
                         if fileNameExt in manualMaskNames:
-                            # This line will be reached for files listed in manual_masks.txt
+                            # This line will be reached for files listed in manual_masks_to_add.txt
                             fileName, fileExt = os.path.splitext(fileNameExt)
                             imagePath = patSubDirPath + '\\' + fileNameExt
                             maskPath = patSubDirPath + '_mask\\' + fileName + '_mask' + fileExt
@@ -244,6 +244,6 @@ def create_manual_masks(dataPath):
                             nrFoundFiles += 1
 
     if not nrFoundFiles == len(manualMaskNames):
-        print('WARNING: Number of files found with names from \'manual_masks.txt\' does not match the number of files listed in \'manual_masks.txt\'.')
+        print('WARNING: Number of files found with names from \'manual_masks_to_add.txt\' does not match the number of files listed in \'manual_masks_to_add.txt\'.')
         print('Number of files found: ', nrFoundFiles)
         print('Number of listed files:', len(manualMaskNames))
