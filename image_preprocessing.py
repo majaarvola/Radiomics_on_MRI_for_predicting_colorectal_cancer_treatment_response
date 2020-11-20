@@ -5,6 +5,7 @@ import radiomics
 import cv2
 import os
 import re
+import csv
 
 def create_mask(imagePath, maskPath, addInterior=True):
     """ 
@@ -247,3 +248,97 @@ def create_manual_masks(dataPath):
         print('WARNING: Number of files found with names from \'manual_masks_to_add.txt\' does not match the number of files listed in \'manual_masks_to_add.txt\'.')
         print('Number of files found: ', nrFoundFiles)
         print('Number of listed files:', len(manualMaskNames))
+
+
+
+def html_reader(filename, word):
+    ''' Reads HTML file, searches for the word and outputs the value '''
+
+    htmlData = open(filename, 'rb').read().decode('utf-16') #Open file in correct format
+
+    # Extract string contain word, everything inbetween, and the value
+    tdWordString = re.findall('<td>' + word + '</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td>', htmlData)
+
+    # Check that the word was found
+    if len(tdWordString) > 0:
+        tdValue = re.findall('<td>.*?</td>', tdWordString[0])  # List all <td> </td> found in the string, the last value is the one of interest
+        value = re.sub('<[/]*td>', '', tdValue[-1]) # remove <td> and </td> and get the last value
+        return value  
+
+    # Print text and return 0 if the extraction failed.
+    else:
+        print(f'Could not find {word} in HTML file')
+        return 0
+
+def html_to_csv(dataPath):
+    ''' Reads HTML files for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
+        If HTML file is missing it sets values to default values '''
+
+    # Create a dictionary which will contain a dictionary for each patient
+    all_patients_dict = {}
+
+    # Create file for output
+    outcomePath = "../../patient_data/outcome.csv"
+    with open(outcomePath, "w") as f:
+        f.truncate() 
+
+    # Create list with all existing patient IDs in the data folder
+    folderContent = os.listdir(dataPath)
+    patIds = [x for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
+
+
+    # Go through all the patients
+    for patientId in patIds:
+        HtmlPath = "../../patient_data/DICOM_html/" + patientId + "T2.HTML" #path to html file
+        patient_dict = {} # new dictionary
+
+        # Check that we have HTML file
+        if os.path.isfile(HtmlPath):
+            words = ['Patient Id', 'Patients Sex', 'Patients Weight', 'Pixel Spacing'] # Specify which values to read
+            for word in words:
+                patient_dict[word] = html_reader(HtmlPath, word) # Read HTML file
+
+            # Some readings requires manual adjustments
+            pixelSpacing = html_reader(HtmlPath, 'Pixel Spacing')  
+            pixelSpacing = pixelSpacing.split("\\")
+            patient_dict['Pixel Spacing x'] = pixelSpacing[0]
+            patient_dict['Pixel Spacing y'] = pixelSpacing[1]
+
+            Id= html_reader(HtmlPath, 'Patient Id')
+            patient_dict['Patient Id short']  = Id[8:].lstrip("0")
+
+            # Store patient dict in all patients dict
+            all_patients_dict[patientId[3:]] = patient_dict
+
+        # If HTML is missing we set default values for the patient.
+        else:
+            n = patientId[3:]
+            patient_dict['Patient Id'] = 'ASMRX06_' + n.zfill(4)
+            patient_dict['Patients Sex'] = 'F'
+            patient_dict['Patients Weight'] = 60
+            patient_dict['Pixel Spacing'] = "0.5\\0.5"
+            patient_dict['Pixel Spacing x'] = "0.5"
+            patient_dict['Pixel Spacing y'] = "0.5"
+            patient_dict['Patient Id short'] = n
+
+            # Store patient dict in all patients dict           
+            all_patients_dict[patientId[3:]] = patient_dict
+
+
+        # Header in CSV is the keys from the dictionary
+        header = list(patient_dict.keys()) 
+
+        # Check if file is empty, if it is we also create the header
+        if os.path.getsize(outcomePath) == 0:
+            with open(outcomePath, 'w', newline='') as File:
+                writer = csv.DictWriter(File, fieldnames=header, delimiter = ';')
+                writer.writeheader()
+                writer.writerow(patient_dict)
+
+        # If file is not empty we append the new content
+        else:
+            with open(outcomePath, 'a', newline='') as File:
+                writer = csv.DictWriter(File, fieldnames=header, delimiter = ';')
+                writer.writerow(patient_dict)
+
+    return all_patients_dict
