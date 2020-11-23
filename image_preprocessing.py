@@ -62,13 +62,14 @@ def erosion(mask):
     return cv2.erode(mask,kernel,iterations = 1)
 
 
-def create_3d_nrrd(dataPath):
+def create_3d_nrrd(dataPath, patientDict):
     """
     ACTION: 
         Create three dimensional nrrd-file from all tiff-files in given folder, 
         the nrrd-file will be located next to the folder with the same name
     INPUTS: 
         dataPath: folder with tiff-files
+        patient_dict: dictionary with DICOM features for the patient
     OUTPUT: 
         1 if nrrd-file was created, 0 if not
     """
@@ -91,8 +92,12 @@ def create_3d_nrrd(dataPath):
         # Insert grayscaled layer into 3D-array
         data[:,:,i] = cv2.imread(dataPath + '\\' + fileName, 0)
         i += 1
+        
+    # Add spacing information in nrrd header    
+    spacings = [patientDict['Pixel Spacing x'], patientDict['Pixel Spacing y'], patientDict['Spacing Between Slices']]
+    header = {'spacings' : spacings}
 
-    nrrd.write(dataPath + '.nrrd', data) # Write 3D-nrrd-file
+    nrrd.write(dataPath + '.nrrd', data, header) # Write 3D-nrrd-file
     return 1
 
 def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
@@ -111,6 +116,9 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
     manualMasksPath = dataPath + '\\manual_masks.txt'
     with open(manualMasksPath, 'r') as manualMasksFile:
         manualMaskNames = manualMasksFile.read().splitlines()
+
+    # Read Dicom files
+    allPatientsDict = html_to_csv(dataPath)
 
     patDirNames = os.listdir(dataPath)
     for patDirName in patDirNames:
@@ -145,13 +153,15 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
                                 createdMasks = create_mask(imagePath, maskPath) or createdMasks
 
                     if not os.path.exists(patSubDirPath + '_mask.nrrd') or overWrite:
-                        createdNrrds = create_3d_nrrd(patSubDirPath + '_mask') or createdNrrds
+                        patientDict = allPatientsDict[patDirName[3:]]
+                        createdNrrds = create_3d_nrrd(patSubDirPath + '_mask', patientDict) or createdNrrds
 
                 elif os.path.isdir(patSubDirPath) and re.search('^Pat.+U$', patSubDirName):
                     # This line will be reached once for sub-directory starting with 'Pat' and ending with 'U'
 
                     if not os.path.exists(patSubDirPath + '.nrrd') or overWrite:
-                        createdNrrds = create_3d_nrrd(patSubDirPath) or createdNrrds
+                        patientDict = allPatientsDict[patDirName[3:]]
+                        createdNrrds = create_3d_nrrd(patSubDirPath, patientDict) or createdNrrds
 
         if createdNrrds and createdMasks:
             print(patDirName + ': Masks and nrrd-files created. ')
@@ -251,10 +261,18 @@ def create_manual_masks(dataPath):
 
 
 
-def html_reader(filename, word):
-    ''' Reads HTML file, searches for the word and outputs the value '''
+def html_reader(dicomPath, word):
+    """ 
+    ACTION: 
+        Reads DICOM file, searches for the word and outputs the value 
+    INPUTS: 
+        dicomPath: path to dicom file
+        word: the word of interest, note that it is case sensitive
+    OUTPUT:
+        value of the given word, 0 if word can't be found in the file
+    """
 
-    htmlData = open(filename, 'rb').read().decode('utf-16') #Open file in correct format
+    htmlData = open(dicomPath, 'rb').read().decode('utf-16') #Open file in correct format
 
     # Extract string contain word, everything inbetween, and the value
     tdWordString = re.findall('<td>' + word + '</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td>', htmlData)
@@ -271,9 +289,15 @@ def html_reader(filename, word):
         return 0
 
 def html_to_csv(dataPath):
-    ''' Reads HTML files for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
-        If HTML file is missing it sets values to default values '''
-
+    """
+    ACTION: 
+        Reads DICOM files for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
+        If DICOM is missing the values are set to default values 
+    INPUTS: 
+        dataPath
+    OUTPUT:
+        A dictionary containing dictionaries for each patient with its DICOM features 
+    """
     # Create a dictionary which will contain a dictionary for each patient
     all_patients_dict = {}
 
