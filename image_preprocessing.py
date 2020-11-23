@@ -262,7 +262,7 @@ def html_reader(filename, word):
     # Check that the word was found
     if len(tdWordString) > 0:
         tdValue = re.findall('<td>.*?</td>', tdWordString[0])  # List all <td> </td> found in the string, the last value is the one of interest
-        value = re.sub('<[/]*td>', '', tdValue[-1]) # remove <td> and </td> and get the last value
+        value = re.sub('</*td>', '', tdValue[-1]) # remove <td> and </td> and get the last value
         return value  
 
     # Print text and return 0 if the extraction failed.
@@ -278,7 +278,7 @@ def html_to_csv(dataPath):
     all_patients_dict = {}
 
     # Create file for output
-    outcomePath = "../../patient_data/outcome.csv"
+    outcomePath = "../../patient_data/dicom_features.csv"
     with open(outcomePath, "w") as f:
         f.truncate() 
 
@@ -289,12 +289,12 @@ def html_to_csv(dataPath):
 
     # Go through all the patients
     for patientId in patIds:
-        HtmlPath = "../../patient_data/DICOM_html/" + patientId + "T2.HTML" #path to html file
+        HtmlPath = "../../patient_data/DICOM/" + patientId + "T2.HTML" #path to html file
         patient_dict = {} # new dictionary
 
         # Check that we have HTML file
         if os.path.isfile(HtmlPath):
-            words = ['Patient Id', 'Patients Sex', 'Patients Weight', 'Pixel Spacing'] # Specify which values to read
+            words = ['Patient Id', 'Patients Sex', 'Patients Weight', 'Pixel Spacing', 'Spacing Between Slices'] # Specify which values to read
             for word in words:
                 patient_dict[word] = html_reader(HtmlPath, word) # Read HTML file
 
@@ -313,10 +313,13 @@ def html_to_csv(dataPath):
         # If HTML is missing we set default values for the patient.
         else:
             n = patientId[3:]
+            print('Dicom features generated with default values for patient:',n)
             patient_dict['Patient Id'] = 'ASMRX06_' + n.zfill(4)
+            # patient_dict
             patient_dict['Patients Sex'] = 'F'
             patient_dict['Patients Weight'] = 60
             patient_dict['Pixel Spacing'] = "0.5\\0.5"
+            patient_dict['Spacing Between Slices'] = 3
             patient_dict['Pixel Spacing x'] = "0.5"
             patient_dict['Pixel Spacing y'] = "0.5"
             patient_dict['Patient Id short'] = n
