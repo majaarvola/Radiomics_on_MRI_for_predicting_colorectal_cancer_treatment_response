@@ -1,3 +1,4 @@
+import image_preprocessing as imgpr
 import cv2 
 import os
 from radiomics import featureextractor
@@ -5,6 +6,23 @@ import scipy
 import trimesh
 import csv
 import re 
+
+def extract_manual_feature(manualFeaturesPath, features):
+    """
+    INPUT: 
+        manualFeaturesPath: Path to csv-file containing patient numbers and manually calculated features
+    OUTPUT: 
+        allPatsDict: A dictionary with patient number (string) as key, and dictionary with features as value
+    """
+    allPatsDict = {} # Directory containing directories
+    with open(manualFeaturesPath, 'r', newline='') as csvFile: # Open the file
+        reader = csv.DictReader(csvFile, delimiter=';') # Create a reader
+        for row in reader: # For every row in the csv-file, add a tuple to the dictionary
+            patDict = {} # Create a directory with features for every patient
+            for feature in features:
+                patDict[feature] = row[feature] # Adding feature to patients directory
+            allPatsDict[row['id']] = patDict # Adding the directory to the 'One directory to rule them all'
+    return allPatsDict
 
 def extract_features_from_image(imagePath, maskPath, paramsPath):
     """
@@ -33,7 +51,7 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
     return results
 
 
-def extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, featuresPath):
+def extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, featuresPath, manualFeaturesDict, dicomFeaturesDict):
     """
     ACTION: 
         Extract all features from a patient and write the result in the featuresFile.
@@ -43,9 +61,16 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
         mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
         paramsPath: parameter path
         featuresPath: path to file where to write the result
+        manualFeaturesDict: Dictionary with manually calculated features for this patient
+        dicomFeaturesDict: Dictionary with features for this patient extracted from DICOM-file
     """    
-    #Add patient ID first in the dictionary
+
+    # Add patient ID first in the dictionary
     features = {"patientId": patientId} 
+
+    # Add manually extracted, and dicom- features to the directory 
+    features.update(manualFeaturesDict)
+    features.update(dicomFeaturesDict)
 
     # Create path to patient folder
     patientFolder = dataPath + '/' + 'Pat' + patientId + '/'
@@ -84,7 +109,7 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
 
 
 
-def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath):
+def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresPath, manualFeaturesPath):
     """
     ACTION: 
         Loops through all patients, extract features and store the content in a file
@@ -94,17 +119,23 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresP
         mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
         paramsPath: parameter path
         featuresPath: path to file where to write all the extracted features
+        manualFeaturesPath: Path to csv-file containing patient numbers and manually calculated features
     """
 
     with open(featuresPath, "w") as f:
         f.truncate()    
 
+    # Collect
+    manualFeaturesDict = extract_manual_feature(manualFeaturesPath, ['age', 'outcome'])
+    dicomFeaturesDict = imgpr.html_to_csv(dataPath)
+
     # Create list with all existing patient IDs in the data folder
     folderContent = os.listdir(dataPath)
-    patIds = [int(x[3:]) for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
+    patIds = [x[3:] for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
 
-    for patientId in sorted(patIds):
-        extract_features_from_patient(dataPath, str(patientId), img2use, mask2use, paramsPath, featuresPath)
+    # Extract features for every patient and put the result in a file
+    for patientId in sorted(patIds, key=float):
+        extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, featuresPath, manualFeaturesDict[patientId], dicomFeaturesDict[patientId])
         print(f"Pat{patientId}: features extracted")
 
 
