@@ -126,12 +126,28 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, featuresP
         f.truncate()    
 
     # Collect
-    manualFeaturesDict = extract_manual_feature(manualFeaturesPath, ['age', 'outcome'])
-    dicomFeaturesDict = imgpr.html_to_csv(dataPath)
+    manualFeaturesDict = extract_manual_feature(manualFeaturesPath, ['age'])
+    dicomFeaturesDict = imgpr.extract_dicom_features(dataPath, ['Patients Sex', 'Patients Weight'])
 
-    # Create list with all existing patient IDs in the data folder
+    # All patient ID:s with a folder with images
     folderContent = os.listdir(dataPath)
-    patIds = [x[3:] for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
+    imageIds = [x[3:] for x in folderContent if re.search('^Pat[0-9]?[0-9]?[0-9]$', x)]
+
+    # All patient ID:s with a DICOM-file
+    dicomIds = list(dicomFeaturesDict.keys())
+
+    # All patient ID:s with given age and outcome
+    manualIdsDict = extract_manual_feature(manualFeaturesPath, ['age', 'outcome'])
+    manualIds = []
+    for patId, patDict in manualIdsDict.items():
+        if float(patDict['age'])>0 and float(patDict['outcome']) >= 0:
+            manualIds.append(patId)
+
+    # All patient ID:s with images, dicom-files, age and outcome
+    patIds = []
+    for id in imageIds:
+        if id in dicomIds and id in manualIds:
+            patIds.append(id)
 
     # Extract features for every patient and put the result in a file
     for patientId in sorted(patIds, key=float):
