@@ -69,7 +69,7 @@ def create_3d_nrrd(dataPath, patientDict):
         the nrrd-file will be located next to the folder with the same name
     INPUTS: 
         dataPath: folder with tiff-files
-        patient_dict: dictionary with DICOM features for the patient
+        patientDict: dictionary with DICOM features for the patient
     OUTPUT: 
         1 if nrrd-file was created, 0 if not
     """
@@ -118,7 +118,7 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
         manualMaskNames = manualMasksFile.read().splitlines()
 
     # Read Dicom files
-    allPatientsDict = html_to_csv(dataPath)
+    allPatientsDict = extract_dicom_features(dataPath)
 
     patDirNames = os.listdir(dataPath)
     for patDirName in patDirNames:
@@ -153,15 +153,21 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
                                 createdMasks = create_mask(imagePath, maskPath) or createdMasks
 
                     if not os.path.exists(patSubDirPath + '_mask.nrrd') or overWrite:
-                        patientDict = allPatientsDict[patDirName[3:]]
-                        createdNrrds = create_3d_nrrd(patSubDirPath + '_mask', patientDict) or createdNrrds
+                        try:
+                            patientDict = allPatientsDict[patDirName[3:]]
+                            createdNrrds = create_3d_nrrd(patSubDirPath + '_mask', patientDict) or createdNrrds
+                        except:
+                            print(patDirName, ': No nrrd-file created (DICOM missing)')
 
                 elif os.path.isdir(patSubDirPath) and re.search('^Pat.+U$', patSubDirName):
                     # This line will be reached once for sub-directory starting with 'Pat' and ending with 'U'
 
                     if not os.path.exists(patSubDirPath + '.nrrd') or overWrite:
-                        patientDict = allPatientsDict[patDirName[3:]]
-                        createdNrrds = create_3d_nrrd(patSubDirPath, patientDict) or createdNrrds
+                        try:
+                            patientDict = allPatientsDict[patDirName[3:]]
+                            createdNrrds = create_3d_nrrd(patSubDirPath, patientDict) or createdNrrds
+                        except:
+                            print(patDirName, ': No nrrd-file created (DICOM missing)')
 
         if createdNrrds and createdMasks:
             print(patDirName + ': Masks and nrrd-files created. ')
@@ -261,45 +267,45 @@ def create_manual_masks(dataPath):
 
 
 
-def html_reader(dicomPath, word):
+def extract_dicom_feature(dicomPath, feature):
     """ 
     ACTION: 
-        Reads DICOM file, searches for the word and outputs the value 
+        Reads DICOM file, searches for the feature and outputs the value 
     INPUTS: 
         dicomPath: path to dicom file
-        word: the word of interest, note that it is case sensitive
+        feature: the feature of interest, note that it is case sensitive
     OUTPUT:
-        value of the given word, 0 if word can't be found in the file
+        value of the given feature, 0 if feature can't be found in the file
     """
 
     htmlData = open(dicomPath, 'rb').read().decode('utf-16') #Open file in correct format
 
-    # Extract string contain word, everything inbetween, and the value
-    tdWordString = re.findall('<td>' + word + '</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td>', htmlData)
+    # Extract string contain feature, everything inbetween, and the value
+    tdfeatureString = re.findall('<td>' + feature + '</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td><td>.*?</td>', htmlData)
 
-    # Check that the word was found
-    if len(tdWordString) > 0:
-        tdValue = re.findall('<td>.*?</td>', tdWordString[0])  # List all <td> </td> found in the string, the last value is the one of interest
+    # Check that the feature was found
+    if len(tdfeatureString) > 0:
+        tdValue = re.findall('<td>.*?</td>', tdfeatureString[0])  # List all <td> </td> found in the string, the last value is the one of interest
         value = re.sub('</*td>', '', tdValue[-1]) # remove <td> and </td> and get the last value
         return value  
 
     # Print text and return 0 if the extraction failed.
     else:
-        print(f'Could not find {word} in HTML file')
+        print(f'Could not find {feature} in HTML file')
         return 0
 
-def html_to_csv(dataPath):
+def extract_dicom_features(dataPath, features = ['Patients Sex', 'Patients Weight', 'Pixel Spacing', 'Spacing Between Slices']):
     """
     ACTION: 
         Reads DICOM files for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
-        If DICOM is missing the values are set to default values 
     INPUTS: 
         dataPath
+        features: list of features to extract from DICOM-files
     OUTPUT:
         A dictionary containing dictionaries for each patient with its DICOM features 
     """
     # Create a dictionary which will contain a dictionary for each patient
-    all_patients_dict = {}
+    allPatsDict = {}
 
     # Create file for output
     outcomePath = "../../patient_data/dicom_features.csv"
@@ -313,59 +319,41 @@ def html_to_csv(dataPath):
 
     # Go through all the patients
     for patientId in patIds:
-        HtmlPath = "../../patient_data/DICOM/" + patientId + "T2.HTML" #path to html file
-        patient_dict = {} # new dictionary
+        dicomPath = "../../patient_data/DICOM/" + patientId + "T2.HTML" #path to html file
+        patDict = {} # new dictionary
 
         # Check that we have HTML file
-        if os.path.isfile(HtmlPath):
-            words = ['Patient Id', 'Patients Sex', 'Patients Weight', 'Pixel Spacing', 'Spacing Between Slices'] # Specify which values to read
-            for word in words:
-                patient_dict[word] = html_reader(HtmlPath, word) # Read HTML file
+        if os.path.isfile(dicomPath):
+            for feature in features:
+                patDict[feature] = extract_dicom_feature(dicomPath, feature) # Read HTML file
 
             # Some readings requires manual adjustments
-            pixelSpacing = html_reader(HtmlPath, 'Pixel Spacing')  
-            pixelSpacing = pixelSpacing.split("\\")
-            patient_dict['Pixel Spacing x'] = pixelSpacing[0]
-            patient_dict['Pixel Spacing y'] = pixelSpacing[1]
-
-            Id= html_reader(HtmlPath, 'Patient Id')
-            patient_dict['Patient Id short']  = Id[8:].lstrip("0")
+            if 'Pixel Spacing' in features:
+                pixelSpacing = patDict['Pixel Spacing'].split('\\')
+                patDict['Pixel Spacing x'] = pixelSpacing[0]
+                patDict['Pixel Spacing y'] = pixelSpacing[1]
+                
+            if 'Patients Sex' in features:
+                patSex = patDict['Patients Sex']
+                patDict['Patients Sex'] = 0 if patSex == 'M' else 1
 
             # Store patient dict in all patients dict
-            all_patients_dict[patientId[3:]] = patient_dict
-
-        # If HTML is missing we set default values for the patient.
-        else:
-            n = patientId[3:]
-            print('Dicom features generated with default values for patient:',n)
-            patient_dict['Patient Id'] = 'ASMRX06_' + n.zfill(4)
-            # patient_dict
-            patient_dict['Patients Sex'] = 'F'
-            patient_dict['Patients Weight'] = 60
-            patient_dict['Pixel Spacing'] = "0.5\\0.5"
-            patient_dict['Spacing Between Slices'] = 3
-            patient_dict['Pixel Spacing x'] = "0.5"
-            patient_dict['Pixel Spacing y'] = "0.5"
-            patient_dict['Patient Id short'] = n
-
-            # Store patient dict in all patients dict           
-            all_patients_dict[patientId[3:]] = patient_dict
-
+            allPatsDict[patientId[3:]] = patDict
 
         # Header in CSV is the keys from the dictionary
-        header = list(patient_dict.keys()) 
+        header = list(patDict.keys()) 
 
         # Check if file is empty, if it is we also create the header
         if os.path.getsize(outcomePath) == 0:
             with open(outcomePath, 'w', newline='') as File:
                 writer = csv.DictWriter(File, fieldnames=header, delimiter = ';')
                 writer.writeheader()
-                writer.writerow(patient_dict)
+                writer.writerow(patDict)
 
         # If file is not empty we append the new content
         else:
             with open(outcomePath, 'a', newline='') as File:
                 writer = csv.DictWriter(File, fieldnames=header, delimiter = ';')
-                writer.writerow(patient_dict)
+                writer.writerow(patDict)
 
-    return all_patients_dict
+    return allPatsDict
