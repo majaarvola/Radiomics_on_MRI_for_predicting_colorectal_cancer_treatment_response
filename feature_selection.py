@@ -1,14 +1,24 @@
 import pandas as pd
-"""
-ACTION: Select features to use for machine learning. Method is specified as an input.
-INPUT: method name (and params), input data, label data
-OUTPUT: feature dictionary (1 if selected, else 0)
-"""
+import pymrmr
+
+
+def select_features(method, nFeatures, selectionFeaturesPath, manualFeaturesPath): 
+    """
+    ACTION: 
+        Select features to use for machine learning. Method is specified as an input.
+    INPUTS: 
+        method: feature selection algorithm to use, eg. 'MRMR'
+        nFeatures: number of features to select
+        selectionFeaturesPath: path to selectionFeatures file
+        manualFeaturesPath: path to manualFeatures file
+    OUTPUT:
+        List of selected features
+    """
 
 # Impement functions for the different feature selection methods
 # OUTPUT: feature dictionary (1 if selected, else 0)
 
-featuresPath = "../../patient_data/selection_features.csv"
+featuresPath = "../../patient_data/selection_features_play.csv"
 manualFeaturesPath = "../../patient_data/manual_features.csv"
 
 X = pd.read_csv(featuresPath, index_col=0, delimiter=';')
@@ -23,4 +33,11 @@ y = y.drop(columns=['age', 'y_patFilt'])
 print(X)
 print(y)
 
+X.index.names = ['id']
+# print(X)
+merged = pd.merge(y, X, how='inner', on='id')
+# print(merged.values)
 
+features = pymrmr.mRMR(merged, "MID", 10)
+
+print(features)
