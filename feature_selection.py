@@ -1,8 +1,10 @@
 import pandas as pd
 import pymrmr
+from sklearn.cluster import KMeans
+from matplotlib import pyplot as plt
 
 
-def select_features(method, nFeatures, selectionFeaturesPath, manualFeaturesPath): 
+def select_features(method, params, selectionFeaturesPath, manualFeaturesPath): 
     """
     ACTION: 
         Select features to use for machine learning. Method is specified as an input.
@@ -15,29 +17,41 @@ def select_features(method, nFeatures, selectionFeaturesPath, manualFeaturesPath
         List of selected features
     """
 
-# Impement functions for the different feature selection methods
-# OUTPUT: feature dictionary (1 if selected, else 0)
+    # Read data from csv-files
+    X = pd.read_csv(selectionFeaturesPath, index_col=0, delimiter=';') # All data in selectionFeatures.csv
+    y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
 
-featuresPath = "../../patient_data/selection_features_play.csv"
-manualFeaturesPath = "../../patient_data/manual_features.csv"
+    # Drop useless information
+    X_diagnostics = [col for col in X if col.startswith('diagnostics')]
+    X = X.drop(columns=X_diagnostics) # Data in selectionFeatures.csv, excluding diagnostic features
+    X.index.names = ['id'] # Renaming 'patientId' to 'id'
+    y = y.filter(items=['outcome']) # Keep only outcome
 
-X = pd.read_csv(featuresPath, index_col=0, delimiter=';')
-y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';')
-X_diagnostics = [col for col in X if col.startswith('diagnostics')]
-X = X.drop(columns=X_diagnostics)
 
-y['y_patFilt'] = [patId in X.index for patId in y.index.values]
-y = y[y['y_patFilt']==True]
-y = y.drop(columns=['age', 'y_patFilt'])
+    if method == 'MRMR':
+        # discretization(X)
+        XandY = pd.merge(y, X, how='inner', on='id')
+        nFeatures = params['nFeatures']
+        internalFEMethod = params['internalFEMethod']
+        return pymrmr.mRMR(XandY, internalFEMethod, nFeatures)
+    else:
+        print(f'Method "{method}" is not implemented in feature_selection.py')
 
-print(X)
-print(y)
+    return []
 
-X.index.names = ['id']
-# print(X)
-merged = pd.merge(y, X, how='inner', on='id')
-# print(merged.values)
 
-features = pymrmr.mRMR(merged, "MID", 10)
+# def discretization(X):
+#     """
+#     docstring
+#     """
+#     kmeans = KMeans(n_clusters=3, random_state=0).fit(X.values[:,1].reshape(-1,1))
+#     print(X.values[:,1])
+#     print(kmeans.labels_)
+#     plt.plot(kmeans.labels_, X.values[:,1],'or')
+#     plt.show()
 
-print(features)
+    # _, nTotalFeatures = X.values.shape
+    # for i in range(nTotalFeatures):
+    #     kmeans = KMeans(n_clusters=3, random_state=0).fit(X.values[:,i].reshape(-1,1))
+    #     X.values[:,i] = kmeans.labels_
+    # print(X)
