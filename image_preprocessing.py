@@ -159,8 +159,8 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
                         except:
                             print(patDirName, ': No nrrd-file created (DICOM missing)')
 
-                elif os.path.isdir(patSubDirPath) and re.search('^Pat.+U$', patSubDirName):
-                    # This line will be reached once for sub-directory starting with 'Pat' and ending with 'U'
+                elif os.path.isdir(patSubDirPath) and re.search('^Pat.+T2U$', patSubDirName): # THIS IS CHANGED TO ONLY CREATE NRRDS FOR T2-images!!!!!!!!
+                    # This line will be reached once for sub-directory starting with 'Pat' and ending with 'T2U'
 
                     if not os.path.exists(patSubDirPath + '.nrrd') or overWrite:
                         try:
