@@ -1,8 +1,6 @@
 import pandas as pd
 import pymrmr
-from sklearn.cluster import KMeans
-from matplotlib import pyplot as plt
-
+from sklearn.preprocessing import KBinsDiscretizer
 
 def select_features(method, params, selectionFeaturesPath, manualFeaturesPath): 
     """
@@ -10,7 +8,8 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         Select features to use for machine learning. Method is specified as an input.
     INPUTS: 
         method: feature selection algorithm to use, eg. 'MRMR'
-        nFeatures: number of features to select
+        params: parameter settings for the selected method (a dictionary)
+                For MRMR: nFeatures, internalFEMethod, nBins, discStrategy
         selectionFeaturesPath: path to selectionFeatures file
         manualFeaturesPath: path to manualFeatures file
     OUTPUT:
@@ -27,31 +26,34 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     X.index.names = ['id'] # Renaming 'patientId' to 'id'
     y = y.filter(items=['outcome']) # Keep only outcome
 
-
+    # Entering the selection method specified
     if method == 'MRMR':
-        # discretization(X)
-        XandY = pd.merge(y, X, how='inner', on='id')
+        # Extracting parameter settings for MRMR
         nFeatures = params['nFeatures']
         internalFEMethod = params['internalFEMethod']
-        return pymrmr.mRMR(XandY, internalFEMethod, nFeatures)
+        nBins = params['nBins']
+        discStrategy = params['discStrategy']
+
+        X = discretization(X, nBins, discStrategy) # Discretizing data
+        XandY = pd.merge(y, X, how='inner', on='id') # Merging input and output into one DataFrame
+        return pymrmr.mRMR(XandY, internalFEMethod, nFeatures) # Run MRMR
     else:
         print(f'Method "{method}" is not implemented in feature_selection.py')
 
     return []
 
 
-# def discretization(X):
-#     """
-#     docstring
-#     """
-#     kmeans = KMeans(n_clusters=3, random_state=0).fit(X.values[:,1].reshape(-1,1))
-#     print(X.values[:,1])
-#     print(kmeans.labels_)
-#     plt.plot(kmeans.labels_, X.values[:,1],'or')
-#     plt.show()
-
-    # _, nTotalFeatures = X.values.shape
-    # for i in range(nTotalFeatures):
-    #     kmeans = KMeans(n_clusters=3, random_state=0).fit(X.values[:,i].reshape(-1,1))
-    #     X.values[:,i] = kmeans.labels_
-    # print(X)
+def discretization(X, nBins, discStrategy):
+    """
+    ACTION: 
+        Discretizes the data
+    INPUTS: 
+        X: DataFrame with input data
+        nBins: Number of bins of the discretization
+        discStrategy: Strategy for specifying the bins (e.g 'uniform', 'quantile', 'kmeans')
+    OUTPUT: 
+        New DataFrame with discretized values. 
+    """
+    trans = KBinsDiscretizer(n_bins=nBins, encode='ordinal', strategy=discStrategy)
+    XnewValues = trans.fit_transform(X.values)
+    return pd.DataFrame(data=XnewValues, index=X.index, columns=X.columns)
