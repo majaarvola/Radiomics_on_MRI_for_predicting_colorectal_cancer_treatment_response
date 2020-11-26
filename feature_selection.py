@@ -41,7 +41,7 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
 
 
 def simple_discretization(X, nBins):
-    normalizedData = (nBins-1)*(data-data.min())/(data.max()-data.min())
+    normalizedData = (nBins-1)*(X-X.min())/(X.max()-X.min())
     return normalizedData.round().astype(int)
 
 # def discretization(X):
