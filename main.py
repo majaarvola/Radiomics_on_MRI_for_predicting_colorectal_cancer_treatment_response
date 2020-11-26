@@ -14,7 +14,10 @@ manualFeaturesPath = "../../patient_data/manual_features.csv"
 img2use = ["T2"]
 mask2use = ["M"]
 
-params = {'nFeatures': 10, 'internalFEMethod': 'MID'}
+params = {'nFeatures': 10, 
+            'internalFEMethod': 'MID', 
+            'nBins': 3, 
+            'discStrategy': 'kmeans'}
 
 t0 = time.time()
 selectedFeatures = fesel.select_features('MRMR', params, selectionFeaturesPath, manualFeaturesPath)
