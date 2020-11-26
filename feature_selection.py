@@ -40,6 +40,10 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     return []
 
 
+def simple_discretization(X, nBins):
+    normalizedData = (nBins-1)*(data-data.min())/(data.max()-data.min())
+    return normalizedData.round().astype(int)
+
 # def discretization(X):
 #     """
 #     docstring
