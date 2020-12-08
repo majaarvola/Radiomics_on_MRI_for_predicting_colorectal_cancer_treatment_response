@@ -2,14 +2,14 @@
 
 imageType:
   Original: {}
-  # LoG:  
-  #   sigma: [1, 3, 5]
-  # Exponential: {}
-  # Logarithm: {}
-  # Gradient: {}  
-  # Wavelet: {}
-  # Square: {}
-  # SquareRoot: {}
+  LoG:  
+    sigma: [1, 3, 5]
+  Exponential: {}
+  Logarithm: {}
+  Gradient: {}  
+  Wavelet: {}
+  Square: {}
+  SquareRoot: {}
   # LBP2D: {}
 
 featureClass: #By default, all features are enabled
