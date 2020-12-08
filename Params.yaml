@@ -10,13 +10,37 @@ imageType:
   Wavelet: {}
   Square: {}
   SquareRoot: {}
-  # LBP2D: {}
+  LBP2D: {}
 
 featureClass: #By default, all features are enabled
   # This is all features except shape2D
   firstorder:
   shape:
-  glcm: 
+  glcm: [ # All features except JointAverage
+    'Autocorrelation', 
+    'ClusterProminence', 
+    'ClusterShade', 
+    'ClusterTendency', 
+    'Contrast', 
+    'Correlation', 
+    'DifferenceAverage', 
+    'DifferenceEntropy', 
+    'DifferenceVariance', 
+    'Id', 
+    'Idm', 
+    'Idmn', 
+    'Idn', 
+    'Imc1', 
+    'Imc2', 
+    'InverseVariance', 
+    'JointEnergy',  
+    'JointEntropy', 
+    # 'MCC', 
+    'MaximumProbability',  
+    'SumAverage', 
+    'SumEntropy', 
+    'SumSquares'
+    ]
   glrlm:
   glszm:
   gldm:
@@ -32,7 +56,7 @@ setting:
 
   # Resampling
   interpolator: 'sitkBSpline'
-  resampledPixelSpacing: [2, 2, 0] # change to 2d: [2,2] for gray scale images
+  resampledPixelSpacing: [0.5, 0.5, 0] # change to 2d: [2,2] for gray scale images
 
   # PreCrop Setting preCrop to true speeds up extraction and makes it less memory intensive
   # padDistance: 10  
