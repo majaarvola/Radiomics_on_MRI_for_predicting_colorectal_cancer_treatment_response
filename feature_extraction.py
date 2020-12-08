@@ -1,7 +1,7 @@
 import image_preprocessing as imgpr
 import cv2 
 import os
-from radiomics import featureextractor
+from radiomics import featureextractor, setVerbosity
 import scipy
 import trimesh
 import csv
@@ -48,6 +48,7 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
         raise IOError('File does not exist: %s' % paramsPath)
     
     extractor = featureextractor.RadiomicsFeatureExtractor(paramsPath)
+    setVerbosity(40) # Set level of verbosity, 40=Errors, 30=Warnings, 20=Info, 10=Debug
     results = extractor.execute(img, mask)
     return results
 
