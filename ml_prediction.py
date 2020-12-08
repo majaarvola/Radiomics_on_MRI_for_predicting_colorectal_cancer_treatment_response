@@ -28,6 +28,7 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
     X = X[selectedFeatures] # Filter on the selected features
 
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
+    X = X[y.outcome != 0]
     y = y['outcome'] # Keep only outcome
     y = y.loc[X.index] # Select only output data for the patients for wich we have input data
 
@@ -122,6 +123,7 @@ def evaluate_model(Xtrain, Xtest, yTrain, yTest, method, params):
     print('Root Mean Square error: ', np.sqrt(metrics.mean_squared_error(yTest.values, yPred)))
     print('Mean Square error:      ', metrics.mean_squared_error(yTest.values, yPred))
     print('Mean Absolute error:    ', metrics.mean_absolute_error(yTest.values, yPred))
+    print('R2-score:               ', metrics.r2_score(yTest.values, yPred))
 
     # Print classification metrics
     print('')
