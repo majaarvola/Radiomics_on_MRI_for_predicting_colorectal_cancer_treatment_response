@@ -174,7 +174,7 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
         elif createdMasks:
             print(patDirName + ': Masks created. ')
         elif createdNrrds:
-            print(patDirName + ': Masks nrrd-files created. ')
+            print(patDirName + ': Nrrd-files created. ')
 
 
 
