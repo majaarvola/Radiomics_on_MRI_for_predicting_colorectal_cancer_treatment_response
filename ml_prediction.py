@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
 
@@ -28,12 +28,19 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
     X = X[selectedFeatures] # Filter on the selected features
 
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
-    X = X[y.outcome != 0]
     y = y['outcome'] # Keep only outcome
     y = y.loc[X.index] # Select only output data for the patients for wich we have input data
 
     # Divide data into train- and test-data
-    Xtrain, Xtest, yTrain, yTest = train_test_split(X,y, test_size=0.2, random_state=0, stratify=y)
+    testIds = [1, 8, 13, 20, 40, 44, 49, 55]
+    trainIds = [v for v in X.index.values if v not in testIds]
+
+    yTest = y.loc[testIds]
+    Xtest = X.loc[testIds]
+    yTrain = y.loc[trainIds]
+    Xtrain = X.loc[trainIds]
+
+    # Xtrain, Xtest, yTrain, yTest = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
 
     if optimizeParams:
         # Convert all parameter settings to lists
@@ -50,7 +57,8 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
             if isinstance(v, list):
                 params[k] = v[0]
 
-    evaluate_model(Xtrain, Xtest, yTrain, yTest, method, params)
+    validate_model(Xtrain, yTrain, method, params)
+    # test_model(Xtrain, Xtest, yTrain, yTest, method, params)
 
 def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, scoringOptiMetric):
     """
@@ -86,7 +94,66 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
     # Return the best parameter setting
     return modelSearch.best_params_
 
-def evaluate_model(Xtrain, Xtest, yTrain, yTest, method, params):
+def validate_model(Xtrain, yTrain, method, params):
+    """
+    ACTION: 
+        K-fold cross validation on the training data and prints some validation results
+    INPUTS: 
+        Xtrain: DataFrame with training features
+        yTrain: DataFrame with training labels
+        method: machine learning algorithm to use, eg. 'RF' (random forest)
+        params: parameter settings for the selected method (a dictionary, values cannot be lists)
+    """
+    # Construct the ml model
+    if method == 'RF':
+        # Extracting parameter settings for Random Forest
+        regModel = RandomForestRegressor(**params, random_state=0)
+    else:
+        print(f'Method "{method}" is not implemented in feature_selection.py')
+
+    # Create k-fold object
+    nSplits = 5
+    kf = KFold(n_splits=nSplits, shuffle=True, random_state=15)
+
+    # Init scoring variables
+    r2Score = 0
+    rmseScore = 0
+    accuracyScore = 0
+    
+    for trainIndex, testIndex in kf.split(Xtrain):
+
+        # Split into train and test data
+        X1 = Xtrain.values[trainIndex]
+        y1 = yTrain.values[trainIndex]
+        X2 = Xtrain.values[testIndex]
+        y2 = yTrain.values[testIndex]    
+
+        # Train model and make prediction on the test data
+        regModel.fit(X1, y1)
+        yPred = regModel.predict(X2)
+        yPredClass = np.round(yPred).astype(int)
+
+        # Add scoring values
+        r2Score += metrics.r2_score(y2, yPred)
+        rmseScore += np.sqrt(metrics.mean_squared_error(y2, yPred))
+        accuracyScore += metrics.accuracy_score(y2, yPredClass)
+
+    # Calculate average score
+    r2Score /= nSplits
+    rmseScore /= nSplits
+    accuracyScore /= nSplits
+
+    # Print metrics
+    print('')
+    print('Validation results on training data')
+    print('Root Mean Square error: ', rmseScore)
+    print('R2-score:               ', r2Score)
+    print('Accuracy:               ', accuracyScore)
+    print('')
+    
+
+
+def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     """
     ACTION: 
         Train a model on the train data with given parameters and evaluate it on the test data.  
@@ -118,6 +185,8 @@ def evaluate_model(Xtrain, Xtest, yTrain, yTest, method, params):
     df.insert(2, 'predictClass', yPredClass, True)
     print(df)
 
+    print('')
+    print('Evaluation on test data')
     # Print regression metrics
     print('')
     print('Root Mean Square error: ', np.sqrt(metrics.mean_squared_error(yTest.values, yPred)))
