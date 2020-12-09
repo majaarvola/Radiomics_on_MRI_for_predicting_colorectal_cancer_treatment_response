@@ -123,7 +123,7 @@ def validate_model(Xtrain, yTrain, method, params):
     elif method == 'RFclass':
         model = RandomForestClassifier(**params, random_state=0)
     elif method == 'LogReg':
-        regModel = LogisticRegression(**params, random_state=0)
+        model = LogisticRegression(**params, random_state=0)
         Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std() # Standardize data        
     else:
         print(f'Method "{method}" is not implemented in ml_prediction.py')
@@ -208,7 +208,7 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     elif method == 'RFclass':
         model = RandomForestClassifier(**params, random_state=0)
     elif method == 'LogReg':
-        regModel = LogisticRegression(**params, random_state=0)
+        model = LogisticRegression(**params, random_state=0)
         # Standardize data: 
         Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std()        
         Xtest=(Xtest-Xtrain.mean())/Xtrain.std()             
