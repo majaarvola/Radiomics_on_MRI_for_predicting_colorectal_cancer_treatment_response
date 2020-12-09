@@ -47,7 +47,7 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         XandY = pd.merge(y, X, how='inner', on='id') # Merging input and output into one DataFrame
         return pymrmr.mRMR(XandY, internalFEMethod, nFeatures) # Run MRMR
 
-    if method == 'LASSO': 
+    elif method == 'LASSO': 
         # Extract parameter setting, fit LASSO model and collect the importance of each feature
         nFeatures = params['nFeatures']
         clf = LassoCV(normalize=True, max_iter=2000).fit(X, y.values.ravel())
@@ -63,9 +63,7 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         idxFeatures = (-importance).argsort()[:nFeatures]
         return [v for v in X.columns.values[idxFeatures]]
         
-    else:
-        print(f'Method "{method}" is not implemented in feature_selection.py')
-
+    print(f'Method "{method}" is not implemented in feature_selection.py')
     return []
 
 
