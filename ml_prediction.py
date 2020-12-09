@@ -2,7 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.preprocessing import StandardScaler
 from sklearn import metrics
+
 
 def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPath, manualFeaturesPath, paramSearchResultsPath, optimizeParams, scoringOptiMetric = 'r2'):
     """
@@ -13,6 +16,7 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
         method: machine learning algorithm to use, eg. 'RF' (random forest)
         params: parameter settings for the selected method (a dictionary, values can be lists)
                 For RF: n_estimators, max_features
+                For LogReg: penalty, solver, C, max_iter
         selectedFeatures: list of features to use when traning a model
         selectionFeaturesPath: path to selectionFeatures file
         manualFeaturesPath: path to manualFeatures file
@@ -70,6 +74,7 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
         method: machine learning algorithm to use, eg. 'RF' (random forest)
         params: parameter settings for the selected method (a dictionary, values must be lists)
                 For RF: nTrees, maxFeatures
+                For LogReg: penalty, solver, C, max_iter
         paramSearchResultsPath: path to paramSearchResults file
         scoringOptiMetric: metric to optimize over the given set of parameters
     OUTPUT:
@@ -78,13 +83,15 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
 
     # Construct the ml model
     if method == 'RF':
-        regModel = RandomForestRegressor(random_state=0)
+        model = RandomForestRegressor(random_state=0)
+    elif method == 'LogReg':
+        model = LogisticRegression(random_state=0)        
     else:
         print(f'Method "{method}" is not implemented in feature_selection.py')
         return
 
     # Create model and do grid search
-    modelSearch = GridSearchCV(regModel, params, scoring=scoringOptiMetric, cv = min(5, int(len(yTrain)/2)))
+    modelSearch = GridSearchCV(model, params, scoring=scoringOptiMetric, cv = min(5, int(len(yTrain)/2)))
     modelSearch.fit(Xtrain.values, yTrain.values)
 
     # Create a csv-file with the results of the model-parameter-search
@@ -104,10 +111,16 @@ def validate_model(Xtrain, yTrain, method, params):
         method: machine learning algorithm to use, eg. 'RF' (random forest)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
     """
+
     # Construct the ml model
     if method == 'RF':
         # Extracting parameter settings for Random Forest
         regModel = RandomForestRegressor(**params, random_state=0)
+    elif method == 'LogReg':
+        regModel = LogisticRegression(**params, random_state=0)
+        
+        # Standardize data: 
+        Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std()
     else:
         print(f'Method "{method}" is not implemented in feature_selection.py')
 
@@ -170,6 +183,12 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     if method == 'RF':
         # Extracting parameter settings for Random Forest
         regModel = RandomForestRegressor(**params, random_state=0)
+    elif method == 'LogReg':
+        regModel = LogisticRegression(**params, random_state=0)
+        
+        # Standardize data: 
+        Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std()        
+        Xtest=(Xtest-Xtrain.mean())/Xtrain.std()     
     else:
         print(f'Method "{method}" is not implemented in feature_selection.py')
         return
