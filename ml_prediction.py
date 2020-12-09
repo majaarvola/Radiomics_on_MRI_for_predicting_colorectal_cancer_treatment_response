@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import GridSearchCV, KFold
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn import metrics
 
 
@@ -13,9 +13,10 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
         Computes the best parameter setting (if optimizeParams is True) by searching the grid of parameter settings specified by the params-dictionary. 
         Train a model on the train data with given parameters and evaluate it on the test data.  
     INPUTS: 
-        method: machine learning algorithm to use, eg. 'RF' (random forest)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values can be lists)
-                For RF: n_estimators, max_features
+                For RFreg: n_estimators, max_features, max_depth
+                For RFclass: n_estimators, max_features, max_depth
                 For LogReg: penalty, solver, C, max_iter
         selectedFeatures: list of features to use when traning a model
         selectionFeaturesPath: path to selectionFeatures file
@@ -71,9 +72,10 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
     INPUTS: 
         Xtrain: DataFrame with training features
         yTrain: DataFrame with training labels
-        method: machine learning algorithm to use, eg. 'RF' (random forest)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values must be lists)
-                For RF: nTrees, maxFeatures
+                For RFreg: n_estimators, max_features, max_depth
+                For RFclass: n_estimators, max_features, max_depth
                 For LogReg: penalty, solver, C, max_iter
         paramSearchResultsPath: path to paramSearchResults file
         scoringOptiMetric: metric to optimize over the given set of parameters
@@ -82,12 +84,15 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
     """
 
     # Construct the ml model
-    if method == 'RF':
+   
+    if method == 'RFreg':
         model = RandomForestRegressor(random_state=0)
+    elif method == 'RFclass':
+        model = RandomForestClassifier(random_state=0)
     elif method == 'LogReg':
-        model = LogisticRegression(random_state=0)        
+        model = LogisticRegression(random_state=0)             
     else:
-        print(f'Method "{method}" is not implemented in feature_selection.py')
+        print(f'Method "{method}" is not implemented in ml_prediction.py')
         return
 
     # Create model and do grid search
@@ -108,21 +113,21 @@ def validate_model(Xtrain, yTrain, method, params):
     INPUTS: 
         Xtrain: DataFrame with training features
         yTrain: DataFrame with training labels
-        method: machine learning algorithm to use, eg. 'RF' (random forest)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
     """
 
     # Construct the ml model
-    if method == 'RF':
-        # Extracting parameter settings for Random Forest
-        regModel = RandomForestRegressor(**params, random_state=0)
+    if method == 'RFreg':
+        model = RandomForestRegressor(**params, random_state=0)
+    elif method == 'RFclass':
+        model = RandomForestClassifier(**params, random_state=0)
     elif method == 'LogReg':
         regModel = LogisticRegression(**params, random_state=0)
-        
-        # Standardize data: 
-        Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std()
+        Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std() # Standardize data        
     else:
-        print(f'Method "{method}" is not implemented in feature_selection.py')
+        print(f'Method "{method}" is not implemented in ml_prediction.py')
+        return
 
     # Create k-fold object
     nSplits = 5
@@ -133,6 +138,10 @@ def validate_model(Xtrain, yTrain, method, params):
     rmseScore = 0
     accuracyScore = 0
     
+    # Init data frame for outcome predictions
+    dfPatPred = pd.DataFrame()
+    k = 0
+    
     for trainIndex, testIndex in kf.split(Xtrain):
 
         # Split into train and test data
@@ -142,8 +151,8 @@ def validate_model(Xtrain, yTrain, method, params):
         y2 = yTrain.values[testIndex]    
 
         # Train model and make prediction on the test data
-        regModel.fit(X1, y1)
-        yPred = regModel.predict(X2)
+        model.fit(X1, y1)
+        yPred = model.predict(X2)
         yPredClass = np.round(yPred).astype(int)
 
         # Add scoring values
@@ -151,14 +160,28 @@ def validate_model(Xtrain, yTrain, method, params):
         rmseScore += np.sqrt(metrics.mean_squared_error(y2, yPred))
         accuracyScore += metrics.accuracy_score(y2, yPredClass)
 
+        # Add the predicted results of the patients
+        dfTemp = pd.DataFrame(yTrain.iloc[testIndex])
+        dfTemp.insert(1, 'predictReg', yPred, True)
+        dfTemp.insert(2, 'predictClass', yPredClass, True)
+        dfTemp.insert(3, 'split', k*np.ones(len(yPred), dtype=int), True)
+        dfPatPred = pd.concat([dfPatPred, dfTemp])
+        k += 1
+
     # Calculate average score
     r2Score /= nSplits
     rmseScore /= nSplits
     accuracyScore /= nSplits
 
+    # Print all predicted outcomes
+    print('')
+    print('Predicted outcome on training data, using k-fold cross validation:')
+    print('')
+    print(dfPatPred)
+
     # Print metrics
     print('')
-    print('Validation results on training data')
+    print('Validation results on training data:')
     print('Root Mean Square error: ', rmseScore)
     print('R2-score:               ', r2Score)
     print('Accuracy:               ', accuracyScore)
@@ -175,37 +198,37 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
         Xtest: DataFrame with test features
         yTrain: DataFrame with training labels
         yTest: DataFrame with test labels
-        method: machine learning algorithm to use, eg. 'RF' (random forest)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
     """
     
     # Construct the ml model
-    if method == 'RF':
-        # Extracting parameter settings for Random Forest
-        regModel = RandomForestRegressor(**params, random_state=0)
+    if method == 'RFreg':
+        model = RandomForestRegressor(**params, random_state=0)
+    elif method == 'RFclass':
+        model = RandomForestClassifier(**params, random_state=0)
     elif method == 'LogReg':
         regModel = LogisticRegression(**params, random_state=0)
-        
         # Standardize data: 
         Xtrain=(Xtrain-Xtrain.mean())/Xtrain.std()        
-        Xtest=(Xtest-Xtrain.mean())/Xtrain.std()     
+        Xtest=(Xtest-Xtrain.mean())/Xtrain.std()             
     else:
-        print(f'Method "{method}" is not implemented in feature_selection.py')
+        print(f'Method "{method}" is not implemented in ml_prediction.py')
         return
     
     # Train model and make prediction on the test data
-    regModel.fit(Xtrain, yTrain)
-    yPred = regModel.predict(Xtest)
+    model.fit(Xtrain, yTrain)
+    yPred = model.predict(Xtest)
     yPredClass = np.round(yPred).astype(int)
 
     # Print a dataFrame with the test labels and the predicted ones
     df = pd.DataFrame(yTest)
-    df.insert(1, 'predict', yPred, True)
+    df.insert(1, 'predictReg', yPred, True)
     df.insert(2, 'predictClass', yPredClass, True)
     print(df)
 
     print('')
-    print('Evaluation on test data')
+    print('Evaluation on test data:')
     # Print regression metrics
     print('')
     print('Root Mean Square error: ', np.sqrt(metrics.mean_squared_error(yTest.values, yPred)))
