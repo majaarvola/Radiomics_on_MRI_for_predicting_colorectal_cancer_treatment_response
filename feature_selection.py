@@ -1,18 +1,20 @@
 import numpy as np
 import pandas as pd
 import pymrmr
-from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import LassoCV
+from sklearn.linear_model import LassoCV, LogisticRegressionCV
 
 def select_features(method, params, selectionFeaturesPath, manualFeaturesPath): 
     """
     ACTION: 
         Select features to use for machine learning. Method is specified as an input.
     INPUTS: 
-        method: feature selection algorithm to use, eg. 'MRMR'
+        method: feature selection algorithm to use, eg. 'MRMR', 'LASSO', 'LogReg'
         params: parameter settings for the selected method (a dictionary)
-                For MRMR: nFeatures, internalFEMethod, nBins, discStrategy
+                For MRMR: nFeatures, internalFEMethod ('MID'/'MIQ'), nBins, discStrategy (e.g. 'kmeans')
+                For LASSO: nFeatures
+                For LogReg: nFeatures
         selectionFeaturesPath: path to selectionFeatures file
         manualFeaturesPath: path to manualFeatures file
     OUTPUT:
@@ -56,13 +58,35 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         # Check that the features selected will have non-zero weight
         nrNonZero = np.count_nonzero(importance)
         if nrNonZero < nFeatures:
-            print(f'Warning: Number of features selected with LASSO is reduced from {nFeatures} to {nrNonZero} to only select features with non-zero weights. ')
+            print(f'Warning: Number of features selected with "{method}" is reduced from {nFeatures} to {nrNonZero} to only select features with non-zero weights. ')
             nFeatures = nrNonZero
         
         # Select and return the best features (as string names)
         idxFeatures = (-importance).argsort()[:nFeatures]
         return [v for v in X.columns.values[idxFeatures]]
+
+    elif method == 'LogReg': 
         
+        nFeatures = params['nFeatures']
+
+        # Standardize input data: 
+        scaler = StandardScaler().fit(X)
+        Xtrans = scaler.transform(X)
+
+        # Fit logistic regression model and collect the importance of each feature
+        clf = LogisticRegressionCV(penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
+        importance = np.mean(np.abs(clf.coef_), 0)
+
+        # Check that the features selected will have non-zero weight
+        nrNonZero = np.count_nonzero(importance)
+        if nrNonZero < nFeatures:
+            print(f'Warning: Number of features selected with "{method}" is reduced from {nFeatures} to {nrNonZero} to only select features with non-zero weights. ')
+            nFeatures = nrNonZero
+
+        # Select and return the best features (as string names)
+        idxFeatures = (-importance).argsort()[:nFeatures]
+        return [v for v in X.columns.values[idxFeatures]]
+
     print(f'Method "{method}" is not implemented in feature_selection.py')
     return []
 
