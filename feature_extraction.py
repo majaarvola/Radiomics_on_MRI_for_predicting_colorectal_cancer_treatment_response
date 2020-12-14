@@ -153,6 +153,8 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selection
 
     # Extract features for every patient and put the result in a file
     for patientId in sorted(patIds, key=float):
+        if patientId != '1':
+            break
         extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesDict[patientId], dicomFeaturesDict[patientId])
         print(f"Pat{patientId}: features extracted")
 

@@ -11,6 +11,7 @@ imageType:
   Square: {}
   SquareRoot: {}
   LBP2D: {}
+  LBP3D: {}
 
 featureClass: #By default, all features are enabled
   # This is all features except shape2D
@@ -35,7 +36,7 @@ featureClass: #By default, all features are enabled
     'InverseVariance', 
     'JointEnergy',  
     'JointEntropy', 
-    # 'MCC', 
+    'MCC', 
     'MaximumProbability',  
     'SumAverage', 
     'SumEntropy', 
