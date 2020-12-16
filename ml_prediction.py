@@ -24,17 +24,29 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
         paramSearchResultsPath: path to paramSearchResults file
         optimizeParams: boolean, if True, GridSearchCV is used to find the best parameter setting
         scoringOptiMetric: metric to optimize over the given set of parameters
+    OUTPUTS: 
+        yTrueTest: Numpy-array with true outcome values of the test data
+        yPredRegTest: Numpy-array with predicted regression outcome values of the test data
+        yTrueVal: Numpy-array with true outcome values of the validation data
+        yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
+        params: The parameter settings that was used on the validation and test data
     """
 
-    # Read data from csv-files
+    # Read input data from csv-files
     X = pd.read_csv(selectionFeaturesPath, index_col=0, delimiter=';') # All data in selectionFeatures.csv
-    X_diagnostics = [col for col in X if col.startswith('diagnostics')]
-    X = X.drop(columns=X_diagnostics) # Data in selectionFeatures.csv, excluding diagnostic features
     X = X[selectedFeatures] # Filter on the selected features
+    idX = X.index.values # Patients with input data
 
+    # Read output data from csv-files
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
-    y = y['outcome'] # Keep only outcome
-    y = y.loc[X.index] # Select only output data for the patients for wich we have input data
+    y = y[y['outcome'] >= 0] # Keep only patients with given outcome
+    y = y[['outcome']] # Keep only outcome
+    idY = y.index.values # Patients with output data
+
+    # Select patiets that have both input and output
+    patIds = np.array([id for id in idX if id in idY])
+    X = X.loc[patIds]
+    y = y.loc[patIds]
 
     # Divide data into train- and test-data
     testIds = [1, 8, 13, 20, 40, 44, 49, 55]
@@ -62,8 +74,11 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
             if isinstance(v, list):
                 params[k] = v[0]
 
-    validate_model(Xtrain, yTrain, method, params)
-    # test_model(Xtrain, Xtest, yTrain, yTest, method, params)
+    # Predict outcome of validation and test data, print some performance metrics
+    yTrueVal, yPredRegVal = validate_model(Xtrain, yTrain, method, params)
+    yTrueTest, yPredRegTest = test_model(Xtrain, Xtest, yTrain, yTest, method, params)
+
+    return yTrueTest, yPredRegTest, yTrueVal, yPredRegVal, params
 
 def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, scoringOptiMetric):
     """
@@ -84,7 +99,6 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
     """
 
     # Construct the ml model
-   
     if method == 'RFreg':
         model = RandomForestRegressor(random_state=0)
     elif method == 'RFclass':
@@ -115,6 +129,9 @@ def validate_model(Xtrain, yTrain, method, params):
         yTrain: DataFrame with training labels
         method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
+    OUTPUTS: 
+        yTrue: Numpy-array with true outcome values
+        yPredReg: Numpy-array with predicted regression outcome values
     """
 
     # Construct the ml model
@@ -132,15 +149,10 @@ def validate_model(Xtrain, yTrain, method, params):
     # Create k-fold object
     nSplits = 5
     kf = KFold(n_splits=nSplits, shuffle=True, random_state=15)
-
-    # Init scoring variables
-    r2Score = 0
-    rmseScore = 0
-    accuracyScore = 0
     
-    # Init data frame for outcome predictions
-    dfPatPred = pd.DataFrame()
-    k = 0
+    # Init vectors for prediction values
+    yPredReg = np.zeros(len(yTrain.index))
+    yTrue = np.zeros(len(yTrain.index))
     
     for trainIndex, testIndex in kf.split(Xtrain):
 
@@ -151,43 +163,13 @@ def validate_model(Xtrain, yTrain, method, params):
         y2 = yTrain.values[testIndex]    
 
         # Train model and make prediction on the test data
-        model.fit(X1, y1)
-        yPred = model.predict(X2)
-        yPredClass = np.round(yPred).astype(int)
+        model.fit(X1, y1.ravel())
+        yPredReg[testIndex] = model.predict(X2)
+        yTrue[testIndex] = y2.ravel()
 
-        # Add scoring values
-        r2Score += metrics.r2_score(y2, yPred)
-        rmseScore += np.sqrt(metrics.mean_squared_error(y2, yPred))
-        accuracyScore += metrics.accuracy_score(y2, yPredClass)
-
-        # Add the predicted results of the patients
-        dfTemp = pd.DataFrame(yTrain.iloc[testIndex])
-        dfTemp.insert(1, 'predictReg', yPred, True)
-        dfTemp.insert(2, 'predictClass', yPredClass, True)
-        dfTemp.insert(3, 'split', k*np.ones(len(yPred), dtype=int), True)
-        dfPatPred = pd.concat([dfPatPred, dfTemp])
-        k += 1
-
-    # Calculate average score
-    r2Score /= nSplits
-    rmseScore /= nSplits
-    accuracyScore /= nSplits
-
-    # Print all predicted outcomes
-    print('')
-    print('Predicted outcome on training data, using k-fold cross validation:')
-    print('')
-    print(dfPatPred)
-
-    # Print metrics
-    print('')
-    print('Validation results on training data:')
-    print('Root Mean Square error: ', rmseScore)
-    print('R2-score:               ', r2Score)
-    print('Accuracy:               ', accuracyScore)
-    print('')
-    
-
+    # Print performance metrics, return true outcome and predicted values
+    print_metrics(yTrue, yPredReg)
+    return yTrue, yPredReg
 
 def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     """
@@ -200,6 +182,9 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
         yTest: DataFrame with test labels
         method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
+    OUTPUTS: 
+        yTrue: Numpy-array with true outcome values
+        yPredReg: Numpy-array with predicted regression outcome values
     """
     
     # Construct the ml model
@@ -218,26 +203,37 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     
     # Train model and make prediction on the test data
     model.fit(Xtrain, yTrain)
-    yPred = model.predict(Xtest)
-    yPredClass = np.round(yPred).astype(int)
+    yPredReg = model.predict(Xtest)
+    yTrue = yTest.values.ravel()
 
-    # Print a dataFrame with the test labels and the predicted ones
-    df = pd.DataFrame(yTest)
-    df.insert(1, 'predictReg', yPred, True)
-    df.insert(2, 'predictClass', yPredClass, True)
-    print(df)
+    # Print performance metrics, return true outcome and predicted values
+    print_metrics(yTrue, yPredReg)
+    return yTrue, yPredReg
 
-    print('')
-    print('Evaluation on test data:')
-    # Print regression metrics
-    print('')
-    print('Root Mean Square error: ', np.sqrt(metrics.mean_squared_error(yTest.values, yPred)))
-    print('Mean Square error:      ', metrics.mean_squared_error(yTest.values, yPred))
-    print('Mean Absolute error:    ', metrics.mean_absolute_error(yTest.values, yPred))
-    print('R2-score:               ', metrics.r2_score(yTest.values, yPred))
 
-    # Print classification metrics
+def print_metrics(yTrue, yPredReg):
+    """
+    docstring
+    """
+    yPredClass = np.round(yPredReg).astype(int)
+    
     print('')
-    print('Accuracy:  ', metrics.accuracy_score(yTest.values, yPredClass))
-    print('Precicion: ', metrics.precision_score(yTest.values, yPredClass, average='micro'))
-    print('Recall:    ', metrics.recall_score(yTest.values, yPredClass, average='micro'))
+    print('Accuracy:          ', metrics.accuracy_score(yTrue, yPredClass))
+    print('Precicion (micro): ', metrics.precision_score(yTrue, yPredClass, average='micro'))
+    print('Recall (micro):    ', metrics.recall_score(yTrue, yPredClass, average='micro'))
+    print('Precicion (macro): ', metrics.precision_score(yTrue, yPredClass, average='macro'))
+    print('Recall (macro):    ', metrics.recall_score(yTrue, yPredClass, average='macro'))
+    # print('AUC (macro):       ', metrics.roc_auc_score(yTrue, yPredReg, average='macro'))
+    # print('AUC (weighted):    ', metrics.roc_auc_score(yTrue, yPredReg, average='weighted'))
+    
+def write_results_to_csv(predResultsPath, FSmethod, FSparams, selectedFeatures, MLmethod, MLparams, yTrueTest, yPredRegTest, yTrueVal, yPredRegVal):
+    """
+    docstring
+    """
+    pass
+
+
+if __name__ == '__main__':
+    yTrue = [1, 2, 2, 3, 1, 3, 2, 2]
+    yPredReg = [2.1, 2.1, 1.65, 1.87, 1.45, 2.67, 2.78, 2.34]
+    print_metrics(yTrue, yPredReg)
