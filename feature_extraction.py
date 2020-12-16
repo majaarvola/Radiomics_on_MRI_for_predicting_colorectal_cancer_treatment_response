@@ -148,7 +148,7 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selection
     # All patient ID:s with images, dicom-files, age and outcome
     patIds = []
     for id in imageIds:
-        if id in dicomIds and id in manualIds:
+        if id in dicomIds: # and id in manualIds:
             patIds.append(id)
 
     # Extract features for every patient and put the result in a file
