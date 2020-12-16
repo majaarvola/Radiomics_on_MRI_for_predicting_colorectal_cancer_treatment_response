@@ -24,10 +24,16 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     # Read data from csv-files
     X = pd.read_csv(selectionFeaturesPath, index_col=0, delimiter=';') # All data in selectionFeatures.csv
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
+    idX = X.index.values # Patients with input data
+    y = y[y['outcome'] >= 0] # Keep only patients with given outcome
+    idY = y.index.values # Patients with output data
+
+    # Select patiets that have both input and output
+    patIds = np.array([id for id in idX if id in idY])
 
     # Remove test data before doing feature selection
     testIds = [1, 8, 13, 20, 40, 44, 49, 55]
-    trainIds = [v for v in X.index.values if v not in testIds]
+    trainIds = [v for v in patIds if v not in testIds]
     y = y.loc[trainIds]
     X = X.loc[trainIds]
 
