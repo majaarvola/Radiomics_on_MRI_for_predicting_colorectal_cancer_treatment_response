@@ -5,6 +5,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn import metrics
+import csv
+import os.path
 
 
 def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPath, manualFeaturesPath, paramSearchResultsPath, optimizeParams, scoringOptiMetric = 'r2'):
@@ -226,11 +228,54 @@ def print_metrics(yTrue, yPredReg):
     # print('AUC (macro):       ', metrics.roc_auc_score(yTrue, yPredReg, average='macro'))
     # print('AUC (weighted):    ', metrics.roc_auc_score(yTrue, yPredReg, average='weighted'))
     
-def write_results_to_csv(predResultsPath, FSmethod, FSparams, selectedFeatures, MLmethod, MLparams, yTrueTest, yPredRegTest, yTrueVal, yPredRegVal):
+def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSparams, selectedFeatures, MLmethod, MLparams, yTrueTest, yPredRegTest, yTrueVal, yPredRegVal):
     """
-    docstring
+    ACTION: 
+        Writes result metrics together with method information to a csv file
+    INPUTS: 
+        predResultsPath: Path to the result csv file
+        selectionFeaturesPath: Path to the feature selection file that was used 
+        FSmethod: Feature selection method
+        FSparams: Feature selection parameters
+        selectedFeatures: Selected features
+        MLmethod: Prediction model
+        MLparams: Prediction model parameters
+        yTrueTest: Numpy-array with true outcome values of the test data
+        yPredRegTest: Numpy-array with predicted regression outcome values of the test data
+        yTrueVal: Numpy-array with true outcome values of the validation data
+        yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
+
     """
-    pass
+    resultsDict = {'selectionFeaturesPath' : selectionFeaturesPath,
+                    'FSmethod': FSmethod,
+                    'FSparams' : FSparams,
+                    'selectedFeatures' : selectedFeatures,
+                    'MLmethod' : MLmethod,
+                    'MLparams' : MLparams}
+
+    yPredClassTest = np.round(yPredRegTest).astype(int)
+    yPredClassVal = np.round(yPredRegVal).astype(int)
+
+    resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
+    resultsDict['precisionMicroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='micro')
+    resultsDict['precisionMacroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='macro')
+
+    resultsDict['accuracyVal'] = metrics.accuracy_score(yTrueVal, yPredClassVal)
+    resultsDict['precisionMicroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='micro')
+    resultsDict['precisionMacroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='macro')
+
+    header = list(resultsDict.keys())
+
+    if os.path.isfile(predResultsPath):
+        with open(predResultsPath, 'a+', newline='') as predResultsFile:
+            writer = csv.DictWriter(predResultsFile, fieldnames=header, delimiter = ';')
+            writer.writerow(resultsDict)
+    else:
+        with open(predResultsPath, 'w', newline='') as predResultsFile:
+            writer = csv.DictWriter(predResultsFile, fieldnames=header, delimiter = ';')
+            writer.writeheader()
+            writer.writerow(resultsDict)
+
 
 
 if __name__ == '__main__':
