@@ -246,6 +246,8 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
         yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
 
     """
+
+    # Creates a dictionary with information about methods and parameter settings
     resultsDict = {'selectionFeaturesPath' : selectionFeaturesPath,
                     'FSmethod': FSmethod,
                     'FSparams' : FSparams,
@@ -253,9 +255,11 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
                     'MLmethod' : MLmethod,
                     'MLparams' : MLparams}
 
+    # Round values to get predicted class
     yPredClassTest = np.round(yPredRegTest).astype(int)
     yPredClassVal = np.round(yPredRegVal).astype(int)
 
+    # Add result metrics to dictionary
     resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
     resultsDict['precisionMicroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='micro')
     resultsDict['precisionMacroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='macro')
@@ -264,13 +268,17 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
     resultsDict['precisionMicroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='micro')
     resultsDict['precisionMacroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='macro')
 
+    # List all the column names to use in file
     header = list(resultsDict.keys())
 
+    # If the file exists we append the new content
     if os.path.isfile(predResultsPath):
         with open(predResultsPath, 'a+', newline='') as predResultsFile:
             writer = csv.DictWriter(predResultsFile, fieldnames=header, delimiter = ';')
             writer.writerow(resultsDict)
-    else:
+
+    # If the file does not exists we create the header and then add the content
+    else: 
         with open(predResultsPath, 'w', newline='') as predResultsFile:
             writer = csv.DictWriter(predResultsFile, fieldnames=header, delimiter = ';')
             writer.writeheader()
