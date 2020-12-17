@@ -41,8 +41,8 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
 
     # Read output data from csv-files
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
-    y = y[y['outcome_dworak'] >= 0] # Keep only patients with given outcome
-    y = y[['outcome_dworak']] # Keep only outcome
+    y = y[y['outcome'] >= 0] # Keep only patients with given outcome
+    y = y[['outcome']] # Keep only outcome
     idY = y.index.values # Patients with output data
 
     # Select patiets that have both input and output
@@ -51,7 +51,8 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
     y = y.loc[patIds]
 
     # Divide data into train- and test-data
-    testIds = [1, 8, 13, 20, 40, 44, 49, 55]
+    testIds = [1, 8, 13, 20, 40, 44, 49, 55] # For original outcome
+    # testIds = [9, 19, 31, 39, 42, 43, 44, 46, 67, 73] # For dworak outcome
     trainIds = [v for v in X.index.values if v not in testIds]
 
     yTest = y.loc[testIds]
@@ -80,6 +81,7 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
     yTrueVal, yPredRegVal = validate_model(Xtrain, yTrain, method, params)
     yTrueTest, yPredRegTest = test_model(Xtrain, Xtest, yTrain, yTest, method, params)
 
+    params['scoringOptiMetric'] = scoringOptiMetric
     return yTrueTest, yPredRegTest, yTrueVal, yPredRegVal, params
 
 def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, scoringOptiMetric):
@@ -113,7 +115,7 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
 
     # Create model and do grid search
     modelSearch = GridSearchCV(model, params, scoring=scoringOptiMetric, cv = min(5, int(len(yTrain)/2)))
-    modelSearch.fit(Xtrain.values, yTrain.values)
+    modelSearch.fit(Xtrain.values, yTrain.values.ravel())
 
     # Create a csv-file with the results of the model-parameter-search
     df = pd.DataFrame(modelSearch.cv_results_)
@@ -204,7 +206,7 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
         return
     
     # Train model and make prediction on the test data
-    model.fit(Xtrain, yTrain)
+    model.fit(Xtrain.values, yTrain.values.ravel())
     yPredReg = model.predict(Xtest)
     yTrue = yTest.values.ravel()
 
@@ -221,10 +223,10 @@ def print_metrics(yTrue, yPredReg):
     
     print('')
     print('Accuracy:          ', metrics.accuracy_score(yTrue, yPredClass))
-    print('Precicion (micro): ', metrics.precision_score(yTrue, yPredClass, average='micro'))
-    print('Recall (micro):    ', metrics.recall_score(yTrue, yPredClass, average='micro'))
-    print('Precicion (macro): ', metrics.precision_score(yTrue, yPredClass, average='macro'))
-    print('Recall (macro):    ', metrics.recall_score(yTrue, yPredClass, average='macro'))
+    print('Precicion (micro): ', metrics.precision_score(yTrue, yPredClass, average='micro', zero_division=0))
+    print('Recall (micro):    ', metrics.recall_score(yTrue, yPredClass, average='micro', zero_division=0))
+    print('Precicion (macro): ', metrics.precision_score(yTrue, yPredClass, average='macro', zero_division=0))
+    print('Recall (macro):    ', metrics.recall_score(yTrue, yPredClass, average='macro', zero_division=0))
     # print('AUC (macro):       ', metrics.roc_auc_score(yTrue, yPredReg, average='macro'))
     # print('AUC (weighted):    ', metrics.roc_auc_score(yTrue, yPredReg, average='weighted'))
     
@@ -261,14 +263,22 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
 
     # Add result metrics to dictionary
     resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
-    resultsDict['precisionMicroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='micro')
-    resultsDict['precisionMacroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='macro')
+    resultsDict['precisionMicroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='micro', zero_division=0)
+    resultsDict['precisionMacroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='macro', zero_division=0)
+    resultsDict['recallMicroTest'] = metrics.recall_score(yTrueTest, yPredClassTest, average='micro', zero_division=0)
+    resultsDict['recallMacroTest'] = metrics.recall_score(yTrueTest, yPredClassTest, average='macro', zero_division=0)
+    resultsDict['f1MicroTest'] = metrics.f1_score(yTrueTest, yPredClassTest, average='micro', zero_division=0)
+    resultsDict['f1MacroTest'] = metrics.f1_score(yTrueTest, yPredClassTest, average='macro', zero_division=0)
     resultsDict['r2Test'] = metrics.r2_score(yTrueTest, yPredRegTest)
     resultsDict['rmseTest'] = np.sqrt(metrics.mean_squared_error(yTrueTest, yPredRegTest))
 
     resultsDict['accuracyVal'] = metrics.accuracy_score(yTrueVal, yPredClassVal)
-    resultsDict['precisionMicroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='micro')
-    resultsDict['precisionMacroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='macro')
+    resultsDict['precisionMicroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='micro', zero_division=0)
+    resultsDict['precisionMacroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='macro', zero_division=0)
+    resultsDict['recallMicroVal'] = metrics.recall_score(yTrueVal, yPredClassVal, average='micro', zero_division=0)
+    resultsDict['recallMacroVal'] = metrics.recall_score(yTrueVal, yPredClassVal, average='macro', zero_division=0)
+    resultsDict['f1MicroVal'] = metrics.f1_score(yTrueVal, yPredClassVal, average='micro', zero_division=0)
+    resultsDict['f1MacroVal'] = metrics.f1_score(yTrueVal, yPredClassVal, average='macro', zero_division=0)
     resultsDict['r2Val'] = metrics.r2_score(yTrueVal, yPredRegVal)
     resultsDict['rmseVal'] = np.sqrt(metrics.mean_squared_error(yTrueVal, yPredRegVal))
 
