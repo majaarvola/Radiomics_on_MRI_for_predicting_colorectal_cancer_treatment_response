@@ -248,6 +248,9 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
         yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
 
     """
+    # Round values to get predicted class
+    yPredClassTest = np.round(yPredRegTest).astype(int)
+    yPredClassVal = np.round(yPredRegVal).astype(int)
 
     # Creates a dictionary with information about methods and parameter settings
     resultsDict = {'selectionFeaturesPath' : selectionFeaturesPath,
@@ -255,11 +258,13 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
                     'FSparams' : FSparams,
                     'selectedFeatures' : selectedFeatures,
                     'MLmethod' : MLmethod,
-                    'MLparams' : MLparams}
-
-    # Round values to get predicted class
-    yPredClassTest = np.round(yPredRegTest).astype(int)
-    yPredClassVal = np.round(yPredRegVal).astype(int)
+                    'MLparams' : MLparams,
+                    'yTrueTest' : yTrueTest,
+                    'yPredRegTest' : yPredRegTest,
+                    'yPredClassTest' : yPredClassTest,
+                    'yTrueVal' : yTrueVal,
+                    'yPredRegVal' : yPredRegVal,
+                    'yPredClassVal' : yPredClassVal}
 
     # Add result metrics to dictionary
     resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
