@@ -259,12 +259,12 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
                     'selectedFeatures' : selectedFeatures,
                     'MLmethod' : MLmethod,
                     'MLparams' : MLparams,
-                    'yTrueTest' : yTrueTest,
-                    'yPredRegTest' : yPredRegTest,
-                    'yPredClassTest' : yPredClassTest,
-                    'yTrueVal' : yTrueVal,
-                    'yPredRegVal' : yPredRegVal,
-                    'yPredClassVal' : yPredClassVal}
+                    'yTrueTest' : yTrueTest.tolist(),
+                    'yPredRegTest' : yPredRegTest.tolist(),
+                    'yPredClassTest' : yPredClassTest.tolist(),
+                    'yTrueVal' : yTrueVal.tolist(),
+                    'yPredRegVal' : yPredRegVal.tolist(),
+                    'yPredClassVal' : yPredClassVal.tolist()}
 
     # Add result metrics to dictionary
     resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
