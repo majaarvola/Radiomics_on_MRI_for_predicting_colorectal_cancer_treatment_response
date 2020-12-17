@@ -32,7 +32,8 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     patIds = np.array([id for id in idX if id in idY])
 
     # Remove test data before doing feature selection
-    testIds = [1, 8, 13, 20, 40, 44, 49, 55]
+    testIds = [1, 8, 13, 20, 40, 44, 49, 55] # For original outcome
+    # testIds = [9, 19, 31, 39, 42, 43, 44, 46, 67, 73] # For dworak outcome
     trainIds = [v for v in patIds if v not in testIds]
     y = y.loc[trainIds]
     X = X.loc[trainIds]
