@@ -41,8 +41,8 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
 
     # Read output data from csv-files
     y = pd.read_csv(manualFeaturesPath, index_col=0, delimiter=';') # All data in manualFeatures.csv
-    y = y[y['outcome'] >= 0] # Keep only patients with given outcome
-    y = y[['outcome']] # Keep only outcome
+    y = y[y['outcome_dworak'] >= 0] # Keep only patients with given outcome
+    y = y[['outcome_dworak']] # Keep only outcome
     idY = y.index.values # Patients with output data
 
     # Select patiets that have both input and output
@@ -263,10 +263,14 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
     resultsDict['accuracyTest'] = metrics.accuracy_score(yTrueTest, yPredClassTest)
     resultsDict['precisionMicroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='micro')
     resultsDict['precisionMacroTest'] = metrics.precision_score(yTrueTest, yPredClassTest, average='macro')
+    resultsDict['r2Test'] = metrics.r2_score(yTrueTest, yPredRegTest)
+    resultsDict['rmseTest'] = np.sqrt(metrics.mean_squared_error(yTrueTest, yPredRegTest))
 
     resultsDict['accuracyVal'] = metrics.accuracy_score(yTrueVal, yPredClassVal)
     resultsDict['precisionMicroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='micro')
     resultsDict['precisionMacroVal'] = metrics.precision_score(yTrueVal, yPredClassVal, average='macro')
+    resultsDict['r2Val'] = metrics.r2_score(yTrueVal, yPredRegVal)
+    resultsDict['rmseVal'] = np.sqrt(metrics.mean_squared_error(yTrueVal, yPredRegVal))
 
     # List all the column names to use in file
     header = list(resultsDict.keys())
