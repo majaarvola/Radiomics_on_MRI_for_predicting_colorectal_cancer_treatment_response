@@ -86,7 +86,10 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
             maskPath = patientFolder + 'Pat' + patientId + 'T2' + mask + '_mask'
 
             # Extract radiomic features
-            radiomicFeaturesDict = extract_features_from_image(imagePath, maskPath, paramsPath)
+            try: 
+                radiomicFeaturesDict = extract_features_from_image(imagePath, maskPath, paramsPath)
+            except:
+                return 0 #Extraction failed
 
             # Add suffix specifying image and mask and append to features dictionary
             radiomicFeaturesDict = {k + '_' + img + '_' + mask: v for k, v in radiomicFeaturesDict.items()}
@@ -108,7 +111,8 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
         with open(selectionFeaturesPath, 'a', newline='') as featuresFile:
             writer = csv.DictWriter(featuresFile, fieldnames=header, delimiter = ';')
             writer.writerow(features)
-
+    
+    return 1 #Successful extraction
 
 
 def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesPath):
@@ -153,8 +157,10 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selection
 
     # Extract features for every patient and put the result in a file
     for patientId in sorted(patIds, key=float):
-        extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesDict[patientId], dicomFeaturesDict[patientId])
-        print(f"Pat{patientId}: features extracted")
+        if extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesDict[patientId], dicomFeaturesDict[patientId]):
+            print(f"Pat{patientId}: features extracted")
+        else:
+            print(f"Pat{patientId}: failed to extract features")
 
 
 def print_features(features):
