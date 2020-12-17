@@ -3,7 +3,7 @@ import pandas as pd
 import pymrmr
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import LassoCV, LogisticRegressionCV
+from sklearn.linear_model import Lasso, LassoCV, LogisticRegression, LogisticRegressionCV
 
 def select_features(method, params, selectionFeaturesPath, manualFeaturesPath): 
     """
@@ -59,7 +59,9 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     elif method == 'LASSO': 
         # Extract parameter setting, fit LASSO model and collect the importance of each feature
         nFeatures = params['nFeatures']
-        clf = LassoCV(normalize=True, max_iter=2000).fit(X, y.values.ravel())
+        alpha = 0.02
+        clf = Lasso(alpha=alpha, normalize=True, max_iter=2000).fit(X, y.values.ravel())
+        # clf = LassoCV(normalize=True, max_iter=2000).fit(X, y.values.ravel())
         importance = np.abs(clf.coef_)
 
         # Check that the features selected will have non-zero weight
@@ -81,7 +83,9 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         Xtrans = scaler.transform(X)
 
         # Fit logistic regression model and collect the importance of each feature
-        clf = LogisticRegressionCV(penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
+        cValue = 0.25
+        clf = LogisticRegression(C=cValue, penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
+        # clf = LogisticRegressionCV(penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
         importance = np.mean(np.abs(clf.coef_), 0)
 
         # Check that the features selected will have non-zero weight
