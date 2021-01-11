@@ -11,12 +11,13 @@ imageType:
   Square: {}
   SquareRoot: {}
   LBP2D: {}
+  LBP3D: {}
 
-featureClass: #By default, all features are enabled
+featureClass:
   # This is all features except shape2D
   firstorder:
   shape:
-  glcm: [ # All features except JointAverage
+  glcm: [ # All glcm features except JointAverage
     'Autocorrelation', 
     'ClusterProminence', 
     'ClusterShade', 
@@ -35,7 +36,7 @@ featureClass: #By default, all features are enabled
     'InverseVariance', 
     'JointEnergy',  
     'JointEntropy', 
-    # 'MCC', 
+    'MCC', 
     'MaximumProbability',  
     'SumAverage', 
     'SumEntropy', 
@@ -50,24 +51,20 @@ featureClass: #By default, all features are enabled
 setting:
   label: 255
   
-  # Normalization
+  # Enable normalization
   normalize: True
   normalizeScale: 100
 
-  # Resampling
+  # Enable resampling
   interpolator: 'sitkBSpline'
-  resampledPixelSpacing: [0.5, 0.5, 0] # change to 2d: [2,2] for gray scale images
+  resampledPixelSpacing: [0.5, 0.5, 0] # Resample only in x-, and y-direction (i.e. not along the axis perpendicular to the tiff-images)
 
-  # PreCrop Setting preCrop to true speeds up extraction and makes it less memory intensive
-  # padDistance: 10  
-  # preCrop: True
-
-  # Probably not needed if input mask is in 2D
+  # Extract features from an image layer by layer, the feature values are aggregated to one combined value for all layers
   force2D: True
   force2Ddimension: 0
 
   # Gray scale discretization
-  binWidth: 5 # This parameter should be estimated by analyzing the dataset firstorder range and chosen to be as close as possible to the 30-130 range. 
+  binWidth: 5 
 
   # Shift to make sure all values are positive
   voxelArrayShift: 300

@@ -12,10 +12,13 @@ def create_mask(imagePath, maskPath, addInterior=True):
     ACTION: 
         Generates a black and white mask of the input image
         The white area corresponds to green markings in the
-        file including any interior points and the rest is black.
+        file including any interior points and the rest is black. 
+        Note that this algorithm fails in some situations, 
+        check the output visually to make sure it is correct. 
     INPUTS: 
         imagePath: path to image file
-        maskPath: path of mask file to be created
+        maskPath: path to mask file to be created
+        addInterior: True/False, whether the pixels inside the green line should be labeled white or not
     OUTPUT: 
         1 if mask was created, 0 if not
     """
@@ -41,35 +44,41 @@ def create_mask(imagePath, maskPath, addInterior=True):
         mask = cv2.fillPoly(mask, cnts, (255, 255, 255))
         mask = erosion(mask) # Perform erosion on mask
 
-    # save the output
+    # Save the output
     if not cv2.imwrite(maskPath, mask):
         print(f"Failed to write output file at {maskPath}")
 
     return 1
 
-def erosion(mask):
+def erosion(inputMask):
     """
     ACTION: 
-        Performs erosion on the input image, returns the result
+        Performs erosion on the input mask, returns the result
     INPUTS: 
-        mask: image to perform erosion on
+        inputMask: binary mask on which to perform erosion on
+    OUTPUT: 
+        Eroded version of the input mask
     """
     kernel = np.ones((3,3),np.uint8)
     kernel[0,0] = 0
     kernel[0,-1] = 0
     kernel[-1,0] = 0
     kernel[-1,-1] = 0
-    return cv2.erode(mask,kernel,iterations = 1)
+    return cv2.erode(inputMask,kernel,iterations = 1)
 
 
 def create_3d_nrrd(dataPath, patientDict):
     """
     ACTION: 
-        Create three dimensional nrrd-file from all tiff-files in given folder, 
-        the nrrd-file will be located next to the folder with the same name
+        Create one three dimensional nrrd-file from a folder with multiple tiff-files, 
+        the nrrd-file will be located next to the folder, with the same name
     INPUTS: 
         dataPath: folder with tiff-files
-        patientDict: dictionary with DICOM features for the patient
+        patientDict: dictionary containing spacing information for the images in specified folder
+            The dictionary should contain at least: 
+                - Pixel Spacing x
+                - Pixel Spacing y
+                - Spacing Between Slices
     OUTPUT: 
         1 if nrrd-file was created, 0 if not
     """
@@ -100,20 +109,21 @@ def create_3d_nrrd(dataPath, patientDict):
     nrrd.write(dataPath + '.nrrd', data, header) # Write 3D-nrrd-file
     return 1
 
-def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
+def create_masks_and_nrrds(dataPath, overWrite = False):
     """ 
     ACTION: 
-        Creates a mask for every tiff image in folder and subfolders (not for images with extension "_mask"). 
-        Creates nrrd files for every tiff image and its mask.
-        The masks are named with the same name as the original images but with an extension "_mask"
+        Create folders with masks from all folders containg tiff-images meeting the following condition: 
+            Foldername starts with 'Pat' and ends with 'T2M', 'T2M+' or 'T2Mfrisk'
+        The created folders are named with the same name as the original folders but with an extension '_mask', 
+        and the same goes for the images inside the folder. 
+        Creates 3D-nrrd files for all folders containg tiff-images, where the foldername ends with 'T2U' or '_mask'
     INPUTS: 
-        dataPath
-        overwrite: overwrite existing masks and nrrd files
-        readGray: create nrrd files based on gray scale image
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
+        overwrite: False by default, whether to overwrite existing masks and nrrd files or not
     """
 
     # Read file names of manually created masks from manual_masks.txt
-    manualMasksPath = dataPath + '\\manual_masks.txt'
+    manualMasksPath = dataPath + '/manual_masks.txt'
     with open(manualMasksPath, 'r') as manualMasksFile:
         manualMaskNames = manualMasksFile.read().splitlines()
 
@@ -159,7 +169,7 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
                         except:
                             print(patDirName, ': No nrrd-file created (DICOM missing)')
 
-                elif os.path.isdir(patSubDirPath) and re.search('^Pat.+T2U$', patSubDirName): # THIS IS CHANGED TO ONLY CREATE NRRDS FOR T2-images!!!!!!!!
+                elif os.path.isdir(patSubDirPath) and re.search('^Pat.+T2U$', patSubDirName):
                     # This line will be reached once for sub-directory starting with 'Pat' and ending with 'T2U'
 
                     if not os.path.exists(patSubDirPath + '.nrrd') or overWrite:
@@ -177,13 +187,12 @@ def create_masks_and_nrrds(dataPath, overWrite = False, readGray = True):
             print(patDirName + ': Nrrd-files created. ')
 
 
-
 def erosion_manual_masks(dataPath):
     """ 
     ACTION: 
         Perform erosion on all images listed in 'manual_masks_to_add.txt', overwrites the images with eroded ones.     
     INPUTS: 
-        dataPath
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
     """
 
     # Read file names of manually created masks from manual_masks_to_add.txt
@@ -221,7 +230,7 @@ def create_manual_masks(dataPath):
     ACTION: 
         Create the masks listed in 'manual_masks_to_add.txt'. The masks are without interior points and erosion.   
     INPUTS: 
-        dataPath
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
     """
 
     # Read file names of manually created masks from manual_masks_to_add.txt
@@ -270,10 +279,10 @@ def create_manual_masks(dataPath):
 def extract_dicom_feature(dicomPath, feature):
     """ 
     ACTION: 
-        Reads DICOM file, searches for the feature and outputs the value 
+        Reads html-file with DICOM header information, searches for the feature and outputs the value 
     INPUTS: 
-        dicomPath: path to dicom file
-        feature: the feature of interest, note that it is case sensitive
+        dicomPath: path to the html-file with DICOM header information
+        feature: the feature of interest as a string, note that it is case sensitive
     OUTPUT:
         value of the given feature, 0 if feature can't be found in the file
     """
@@ -287,7 +296,7 @@ def extract_dicom_feature(dicomPath, feature):
     if len(tdfeatureString) > 0:
         tdValue = re.findall('<td>.*?</td>', tdfeatureString[0])  # List all <td> </td> found in the string, the last value is the one of interest
         value = re.sub('</*td>', '', tdValue[-1]) # remove <td> and </td> and get the last value
-        return value  
+        return value 
 
     # Print text and return 0 if the extraction failed.
     else:
@@ -297,18 +306,19 @@ def extract_dicom_feature(dicomPath, feature):
 def extract_dicom_features(dataPath, features = ['Patients Sex', 'Patients Weight', 'Pixel Spacing', 'Spacing Between Slices']):
     """
     ACTION: 
-        Reads DICOM files for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
+        Reads html-file with DICOM header information for all patients, creates a csv with content of interest and returns a dictionary for all patients with the same content.
     INPUTS: 
-        dataPath
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
         features: list of features to extract from DICOM-files
     OUTPUT:
         A dictionary containing dictionaries for each patient with its DICOM features 
     """
+
     # Create a dictionary which will contain a dictionary for each patient
     allPatsDict = {}
 
     # Create file for output
-    outcomePath = "../../patient_data/dicom_features.csv"
+    outcomePath = dataPath + "/dicom_features.csv"
     with open(outcomePath, "w") as f:
         f.truncate() 
 
@@ -319,7 +329,7 @@ def extract_dicom_features(dataPath, features = ['Patients Sex', 'Patients Weigh
 
     # Go through all the patients
     for patientId in patIds:
-        dicomPath = "../../patient_data/DICOM/" + patientId + "T2.HTML" #path to html file
+        dicomPath = dataPath + "/DICOM/" + patientId + "T2.HTML" #path to html file
         patDict = {} # new dictionary
 
         # Check that we have HTML file

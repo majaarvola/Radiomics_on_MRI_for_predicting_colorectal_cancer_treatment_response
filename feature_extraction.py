@@ -1,4 +1,4 @@
-import image_preprocessing as imgpr
+import image_processing as imgpr
 import cv2 
 import os
 from radiomics import featureextractor, setVerbosity
@@ -9,8 +9,10 @@ import re
 
 def extract_manual_feature(manualFeaturesPath, features):
     """
+    ACTION: 
+        Open a csv-file with patient information created manually, read the content and create a dictionary with dictionaries containing specified features
     INPUT: 
-        manualFeaturesPath: Path to csv-file containing patient numbers and manually calculated features
+        manualFeaturesPath: Path to csv-file containing patient numbers and manually calculated features, structure of the file is specified in 'README.md'
         features: A list of features (strings) to put in the dictionary 
     OUTPUT: 
         allPatsDict: A dictionary with patient number (string) as key, and dictionary with features as value
@@ -28,13 +30,14 @@ def extract_manual_feature(manualFeaturesPath, features):
 def extract_features_from_image(imagePath, maskPath, paramsPath):
     """
     ACTION: 
-        Extract radiomic features from one image given mask and parameters
+        Extract radiomic features from one image, given mask and parameters, 
+        and return a dictionary with the feature values
     INPUT: 
-        imagePath: path to image nrrd
-        maskPath: path to mask nrrd
-        paramsPath: path to file where to write the result
+        imagePath: path to image nrrd-file (without extension)
+        maskPath: path to mask nrrd-file (without extension)
+        paramsPath: path to file with radiomic feature extraction settings
     OUTPUT: 
-        dictionary
+        dictionary with all extracted features
     """
 
     img = imagePath + ".nrrd"
@@ -56,15 +59,18 @@ def extract_features_from_image(imagePath, maskPath, paramsPath):
 def extract_features_from_patient(dataPath, patientId, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesDict, dicomFeaturesDict):
     """
     ACTION: 
-        Extract all features from a patient and write the result in the featuresFile.
+        Extract all features from a patient and write the result to a csv (selectionFeaturesPath).
     INPUT:  
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
         patientId: Patient ID in string format, ex "13"
         img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
         mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
-        paramsPath: parameter path
-        selectionFeaturesPath: path to file where to write the result
+        paramsPath: path to file with radiomic feature extraction settings
+        selectionFeaturesPath: path to csv-file where to write the result
         manualFeaturesDict: Dictionary with manually calculated features for this patient
-        dicomFeaturesDict: Dictionary with features for this patient extracted from DICOM-file
+        dicomFeaturesDict: Dictionary with features for this patient extracted from the html-file with DICOM header information
+    OUTPUT: 
+        1 if extraction was successful, 0 if not
     """    
 
     # Add patient ID first in the dictionary
@@ -83,13 +89,13 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
 
         # Go through all masks and create mask paths
         for mask in mask2use:
-            maskPath = patientFolder + 'Pat' + patientId + 'T2' + mask + '_mask'
+            maskPath = patientFolder + 'Pat' + patientId + img + mask + '_mask'
 
             # Extract radiomic features
             try: 
                 radiomicFeaturesDict = extract_features_from_image(imagePath, maskPath, paramsPath)
             except:
-                return 0 #Extraction failed
+                return 0 # Extraction failed
 
             # Add suffix specifying image and mask and append to features dictionary
             radiomicFeaturesDict = {k + '_' + img + '_' + mask: v for k, v in radiomicFeaturesDict.items()}
@@ -112,19 +118,20 @@ def extract_features_from_patient(dataPath, patientId, img2use, mask2use, params
             writer = csv.DictWriter(featuresFile, fieldnames=header, delimiter = ';')
             writer.writerow(features)
     
-    return 1 #Successful extraction
+    return 1 # Successful extraction
 
 
 def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesPath):
     """
     ACTION: 
-        Loops through all patients, extract features and store the content in a file
+        Loops through all patient folders, for the patiets that we have all images, manual features, and html-file with DICOM header information. 
+        Extract features and store the content in a csv-file
     INPUT:  
-        dataPath
+        dataPath: path to the folder containg all the data, the structure inside this folder is important and specified in 'README.md'
         img2use: list of types of scans to extract features from, ex ["T1", "T2", "Diff", "ADC"]
         mask2use: list of masks to use for extracting features, ex ["M", "M+", "Mfrisk"]
-        paramsPath: parameter path
-        selectionFeaturesPath: path to file where to write all the extracted features
+        paramsPath: path to file with radiomic feature extraction settings
+        selectionFeaturesPath: path to csv-file where to write all the extracted features
         manualFeaturesPath: Path to csv-file containing patient numbers and manually calculated features
     """
 
@@ -161,15 +168,3 @@ def extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selection
             print(f"Pat{patientId}: features extracted")
         else:
             print(f"Pat{patientId}: failed to extract features")
-
-
-def print_features(features):
-    """
-    ACTION: 
-        Print the radiomics features
-    INPUT: 
-        dictionary with radiomics features
-    """
-    print("Calculated features")
-    for key, value in features.items():
-        print("\t", key, ":", value)

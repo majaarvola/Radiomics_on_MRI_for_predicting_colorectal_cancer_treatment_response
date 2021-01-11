@@ -12,10 +12,11 @@ import os.path
 def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPath, manualFeaturesPath, paramSearchResultsPath, optimizeParams, scoringOptiMetric = 'r2'):
     """
     ACTION: 
-        Computes the best parameter setting (if optimizeParams is True) by searching the grid of parameter settings specified by the params-dictionary. 
-        Train a model on the train data with given parameters and evaluate it on the test data.  
+        Train a specified model on the training data. The model parameters will be optimized by cross-validation if specified. 
+        The train/test-division of the data is hard coded by patient indices in this function. 
+        The model is evaluated by cross-validation on the training data and tested on the test data. 
     INPUTS: 
-        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier), 'LogReg' (logistic regression)
         params: parameter settings for the selected method (a dictionary, values can be lists)
                 For RFreg: n_estimators, max_features, max_depth
                 For RFclass: n_estimators, max_features, max_depth
@@ -23,14 +24,14 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
         selectedFeatures: list of features to use when traning a model
         selectionFeaturesPath: path to selectionFeatures file
         manualFeaturesPath: path to manualFeatures file
-        paramSearchResultsPath: path to paramSearchResults file
+        paramSearchResultsPath: path to csv-file that will be created, containing results from the parameter optimization
         optimizeParams: boolean, if True, GridSearchCV is used to find the best parameter setting
-        scoringOptiMetric: metric to optimize over the given set of parameters
+        scoringOptiMetric: metric to optimize, over the given set of parameters
     OUTPUTS: 
         yTrueTest: Numpy-array with true outcome values of the test data
-        yPredRegTest: Numpy-array with predicted regression outcome values of the test data
+        yPredRegTest: Numpy-array with predicted regression outcome values of the test data (integers for classification methods)
         yTrueVal: Numpy-array with true outcome values of the validation data
-        yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
+        yPredRegVal: Numpy-array with predicted regression outcome values of the validation data (integers for classification methods)
         params: The parameter settings that was used on the validation and test data
     """
 
@@ -51,16 +52,13 @@ def create_evaluate_model(method, params, selectedFeatures, selectionFeaturesPat
     y = y.loc[patIds]
 
     # Divide data into train- and test-data
-    testIds = [1, 8, 13, 20, 40, 44, 49, 55] # For original outcome
-    # testIds = [9, 19, 31, 39, 42, 43, 44, 46, 67, 73] # For dworak outcome
+    testIds = [1, 8, 13, 20, 40, 44, 49, 55]
     trainIds = [v for v in X.index.values if v not in testIds]
 
     yTest = y.loc[testIds]
     Xtest = X.loc[testIds]
     yTrain = y.loc[trainIds]
     Xtrain = X.loc[trainIds]
-
-    # Xtrain, Xtest, yTrain, yTest = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
 
     if optimizeParams:
         # Convert all parameter settings to lists
@@ -91,12 +89,12 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
     INPUTS: 
         Xtrain: DataFrame with training features
         yTrain: DataFrame with training labels
-        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier), 'LogReg' (logistic regression)
         params: parameter settings for the selected method (a dictionary, values must be lists)
                 For RFreg: n_estimators, max_features, max_depth
                 For RFclass: n_estimators, max_features, max_depth
                 For LogReg: penalty, solver, C, max_iter
-        paramSearchResultsPath: path to paramSearchResults file
+        paramSearchResultsPath: path to csv-file that will be created, containing results from the parameter optimization
         scoringOptiMetric: metric to optimize over the given set of parameters
     OUTPUT:
         A dictionary with the best parameter setting
@@ -127,7 +125,7 @@ def search_model_params(Xtrain, yTrain, method, params, paramSearchResultsPath, 
 def validate_model(Xtrain, yTrain, method, params):
     """
     ACTION: 
-        K-fold cross validation on the training data and prints some validation results
+        Run cross-validation on the training data, prints some validation results, and return true and predicted labels
     INPUTS: 
         Xtrain: DataFrame with training features
         yTrain: DataFrame with training labels
@@ -178,14 +176,18 @@ def validate_model(Xtrain, yTrain, method, params):
 def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
     """
     ACTION: 
-        Train a model on the train data with given parameters and evaluate it on the test data.  
+        Train a model on the training data with given parameters and test it on the test data. 
+        Some performance metrics will be printed, and true and predicted labels are returned. 
     INPUTS: 
         Xtrain: DataFrame with training features
         Xtest: DataFrame with test features
         yTrain: DataFrame with training labels
         yTest: DataFrame with test labels
-        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier)
+        method: machine learning algorithm to use, eg. 'RFreg' (random forest regression), 'RFclass' (random forest classifier), 'LogReg' (logistic regression)
         params: parameter settings for the selected method (a dictionary, values cannot be lists)
+                For RFreg: n_estimators, max_features, max_depth
+                For RFclass: n_estimators, max_features, max_depth
+                For LogReg: penalty, solver, C, max_iter
     OUTPUTS: 
         yTrue: Numpy-array with true outcome values
         yPredReg: Numpy-array with predicted regression outcome values
@@ -217,8 +219,14 @@ def test_model(Xtrain, Xtest, yTrain, yTest, method, params):
 
 def print_metrics(yTrue, yPredReg):
     """
-    docstring
+    ACTION: 
+        Print some performance metrics
+    INPUT: 
+        yTrue: True output values as list or numpy array
+        yPredReg: Predicted regressional output values as list or numpy array (list of int if classification)
     """
+
+    # Round values to get predicted class
     yPredClass = np.round(yPredReg).astype(int)
     
     print('')
@@ -227,15 +235,13 @@ def print_metrics(yTrue, yPredReg):
     print('Recall (micro):    ', metrics.recall_score(yTrue, yPredClass, average='micro', zero_division=0))
     print('Precicion (macro): ', metrics.precision_score(yTrue, yPredClass, average='macro', zero_division=0))
     print('Recall (macro):    ', metrics.recall_score(yTrue, yPredClass, average='macro', zero_division=0))
-    # print('AUC (macro):       ', metrics.roc_auc_score(yTrue, yPredReg, average='macro'))
-    # print('AUC (weighted):    ', metrics.roc_auc_score(yTrue, yPredReg, average='weighted'))
     
 def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSparams, selectedFeatures, MLmethod, MLparams, yTrueTest, yPredRegTest, yTrueVal, yPredRegVal):
     """
     ACTION: 
-        Writes result metrics together with method information to a csv file
+        Writes result metrics together with method information to a csv-file
     INPUTS: 
-        predResultsPath: Path to the result csv file
+        predResultsPath: Path to the csv-file where to write the results
         selectionFeaturesPath: Path to the feature selection file that was used 
         FSmethod: Feature selection method
         FSparams: Feature selection parameters
@@ -246,8 +252,8 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
         yPredRegTest: Numpy-array with predicted regression outcome values of the test data
         yTrueVal: Numpy-array with true outcome values of the validation data
         yPredRegVal: Numpy-array with predicted regression outcome values of the validation data
-
     """
+
     # Round values to get predicted class
     yPredClassTest = np.round(yPredRegTest).astype(int)
     yPredClassVal = np.round(yPredRegVal).astype(int)
@@ -302,10 +308,3 @@ def write_results_to_csv(predResultsPath, selectionFeaturesPath, FSmethod, FSpar
             writer = csv.DictWriter(predResultsFile, fieldnames=header, delimiter = ';')
             writer.writeheader()
             writer.writerow(resultsDict)
-
-
-
-if __name__ == '__main__':
-    yTrue = [1, 2, 2, 3, 1, 3, 2, 2]
-    yPredReg = [2.1, 2.1, 1.65, 1.87, 1.45, 2.67, 2.78, 2.34]
-    print_metrics(yTrue, yPredReg)

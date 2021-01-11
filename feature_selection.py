@@ -3,14 +3,14 @@ import pandas as pd
 import pymrmr
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler
 from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import Lasso, LassoCV, LogisticRegression, LogisticRegressionCV
+from sklearn.linear_model import Lasso, LogisticRegression
 
 def select_features(method, params, selectionFeaturesPath, manualFeaturesPath): 
     """
     ACTION: 
         Select features to use for machine learning. Method is specified as an input.
     INPUTS: 
-        method: feature selection algorithm to use, eg. 'MRMR', 'LASSO', 'LogReg'
+        method: feature selection algorithm to use, eg. 'MRMR', 'LASSO', or 'LogReg'
         params: parameter settings for the selected method (a dictionary)
                 For MRMR: nFeatures, internalFEMethod ('MID'/'MIQ'), nBins, discStrategy (e.g. 'kmeans')
                 For LASSO: nFeatures
@@ -32,8 +32,7 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
     patIds = np.array([id for id in idX if id in idY])
 
     # Remove test data before doing feature selection
-    testIds = [1, 8, 13, 20, 40, 44, 49, 55] # For original outcome
-    # testIds = [9, 19, 31, 39, 42, 43, 44, 46, 67, 73] # For dworak outcome
+    testIds = [1, 8, 13, 20, 40, 44, 49, 55]
     trainIds = [v for v in patIds if v not in testIds]
     y = y.loc[trainIds]
     X = X.loc[trainIds]
@@ -61,7 +60,6 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         nFeatures = params['nFeatures']
         alpha = 0.02
         clf = Lasso(alpha=alpha, normalize=True, max_iter=2000).fit(X, y.values.ravel())
-        # clf = LassoCV(normalize=True, max_iter=2000).fit(X, y.values.ravel())
         importance = np.abs(clf.coef_)
 
         # Check that the features selected will have non-zero weight
@@ -85,7 +83,6 @@ def select_features(method, params, selectionFeaturesPath, manualFeaturesPath):
         # Fit logistic regression model and collect the importance of each feature
         cValue = 0.25
         clf = LogisticRegression(C=cValue, penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
-        # clf = LogisticRegressionCV(penalty='l1', solver='liblinear', max_iter=2000, random_state=0).fit(Xtrans, y.values.ravel())
         importance = np.mean(np.abs(clf.coef_), 0)
 
         # Check that the features selected will have non-zero weight
