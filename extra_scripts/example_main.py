@@ -20,7 +20,7 @@ imgpr.create_masks_and_nrrds(dataPath)
 # Feature extraction
 img2use = ["T2"]
 mask2use = ["M+"]
-paramsPath = "Params.yaml"
+paramsPath = "../Params.yaml"
 fextr.extract_features_from_all(dataPath, img2use, mask2use, paramsPath, selectionFeaturesPath, manualFeaturesPath)
 
 
